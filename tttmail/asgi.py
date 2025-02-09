@@ -1,5 +1,5 @@
 """
-ASGI config for tttmail project.
+ASGI config for scp project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
@@ -9,8 +9,33 @@ https://docs.djangoproject.com/en/3.2/howto/deployment/asgi/
 
 import os
 
+from channels.auth import AuthMiddlewareStack
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.security.websocket import AllowedHostsOriginValidator
 from django.core.asgi import get_asgi_application
+from django.urls import path
+from scp.middlewares.channels import ChannelsTokenAuthMiddleware
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'tttmail.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "scp.settings")
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+# Initialize Django ASGI application early to ensure the AppRegistry
+# is populated before importing code that may import ORM models.
 
-application = get_asgi_application()
+django_asgi_app = get_asgi_application()
+
+from core.consumers import WsConsumer
+
+application = ProtocolTypeRouter({
+    # Django's ASGI application to handle traditional HTTP requests
+    "http": django_asgi_app,
+
+    # WebSocket handler
+    "websocket": AllowedHostsOriginValidator(
+        # ChannelsTokenAuthMiddleware(
+        AuthMiddlewareStack(
+            URLRouter([
+                path("ws/", WsConsumer.as_asgi()),
+            ])
+        )
+    ),
+})
