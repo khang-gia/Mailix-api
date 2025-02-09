@@ -125,7 +125,7 @@ class BaseCreateUpdateModel(BaseCreateDeleteModel):
     class Meta:
         abstract = True
 
-class Deparment(BaseCreateUpdateModel):
+class Department(BaseCreateUpdateModel):
     code = models.CharField("Code", max_length=20)
     name = models.CharField("Name", max_length=50)
     location = models.CharField("Location", max_length=200, null=True, blank=True)
@@ -135,6 +135,12 @@ class Deparment(BaseCreateUpdateModel):
     def _str_(self) -> str:
         return "Department <{}> {}".format(self.pk, self.name)
 
+class Title(models.Model):
+    code = models.CharField("Code", max_length=20)
+    name = models.CharField("Name", max_length=50)
+
+    def __str__(self):
+        return "Title <{}> {}".format(self.pk, self.name)
 class Nationality(BaseCreateUpdateModel):
     code = models.CharField("Code", max_length=20)
     name = models.CharField("Name", max_length=50)
@@ -236,7 +242,7 @@ COMMUNIST_PARTY_MEMBER_FORM_CHOICES = (
 )
 class CommunistPartyMember(models.Model):
   card_no = models.CharField("Card No", max_length=100, null=True, blank=True)
-  form = models.CharField("Form", choices=COMMUNIST_PARTY_MEMBER_FORM_CHOICES)
+  form = models.IntegerField("Form", choices=COMMUNIST_PARTY_MEMBER_FORM_CHOICES)
   from_date = models.DateField("From Date", null=True, blank=True)
   to_date = models.DateField("To Date", null=True, blank=True)
   admission_place = models.CharField("Admission Place", max_length=200, null=True, blank=True)
@@ -249,7 +255,7 @@ class CommunistPartyMember(models.Model):
 
 class Profile(BaseCreateUpdateModel):
     user = models.OneToOneField("auth.User", on_delete=models.CASCADE, related_name='profile')
-    department = models.ForeignKey("core.Department", on_delete=models.CASCADE, related_name="users", null=True, blank=True)
+    department = models.ForeignKey("core.Department", on_delete=models.CASCADE, related_name="profile", null=True, blank=True)
     employee_code = models.CharField("Employee Code", max_length=50)
     #Personal Info
     timekeeping_id = models.CharField("Timekeeping ID", max_length=50, null=True, blank=True)
@@ -296,6 +302,52 @@ class Profile(BaseCreateUpdateModel):
     email = models.EmailField('Email', null=True, blank=True)
     permanent_address = models.CharField('Permanent Address', max_length=200, null=True, blank=True)
     current_address = models.CharField('Current Address', max_length=200, null=True, blank=True)
+    public_name = models.CharField('Bút danh', max_length=50, null=True, blank=True)
 
     def __str__(self):
         return "Profile<{}> {}".format(self.pk, self.user)
+
+
+class SystemNotification(models.Model):
+    title = models.CharField("Title", max_length=200)
+    image = models.ImageField(upload_to='system', null=True, blank=True)
+    message = models.TextField("Message", null=True, blank=True)
+    link_to = models.CharField("Link to", max_length=200, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    show_popup = models.BooleanField("Show Popup", default=False)
+    popup_time = models.DateTimeField("Popup time", null=True, blank=True)
+
+    def __str__(self):
+        return self.title
+
+class Feedback(models.Model):
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    title = models.CharField("Title", max_length=200, null=True, blank=True)
+    feedback = models.TextField("Feedback", null=True, blank=True)
+    image = models.ImageField(upload_to='feedback', null=True, blank=True)
+    created_at = models.DateTimeField('Created At', auto_now_add=True)
+    
+    def __str__(self):
+        return '{}: {}'.format(self.user, self.title)
+    
+class HotEvent(models.Model):
+    title = models.CharField('Title', max_length=100)
+    html_id = models.CharField('HTML ID', max_length=200, null=True, blank=True)
+    css_classes = models.CharField('Animate Classes', max_length=200, default='animate-pulse text-yellow-600', null=True, blank=True)
+    url = models.URLField("Url", null=True, blank=True)
+    target = models.URLField("Target", null=True, blank=True)
+    active = models.BooleanField('Active', default=False, db_index=True)
+    created_at = models.DateTimeField('Created At', auto_now_add=True)
+
+    def __str__(self) -> str:
+      return f'{self.title} | {self.active}'
+    
+class HappeningEvent(models.Model):
+  title = models.CharField("Title", max_length=200)
+  embed_url = models.URLField("Embed Url", null=True, blank=True)
+  start_time = models.DateTimeField("Start Time", db_index=True)
+  end_time = models.DateTimeField("End Time", db_index=True)
+  active = models.BooleanField('Active', default=False, db_index=True)
+  
+  def __str__(self):
+        return self.title

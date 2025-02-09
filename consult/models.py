@@ -2,8 +2,6 @@ from django.db import models
 from django.utils import timezone
 from django_quill.fields import QuillField
 
-from core.utils.date import is_dayoff, tplus
-
 ARTICLE_TYPES = (
     (1, 'Khuyến nghị'),
     (2, 'Phân tích'),
@@ -96,35 +94,4 @@ STRATEGIES = (
     ('L', 'Long Term'),
     ('V', 'Value'),
 )
-class Recommendation(models.Model):
-
-    symbol = models.CharField("Symbol", max_length=15, db_index=True)
-    buy_date = models.DateField("Buy Date", null=True, blank=True)
-    buy_price = models.FloatField("Buy Price", null=True, blank=True)
-    stop_loss = models.FloatField("Stop Loss", null=True, blank=True)
-    target_price = models.FloatField("Target Price", null=True, blank=True)
-    ratio = models.FloatField("Ratio", null=True, blank=True)
-    note = models.TextField("Note", null=True, blank=True)
-    strategy = models.TextField('Strategy', max_length=5, choices=STRATEGIES, default='T')
-    is_closed = models.BooleanField("Is Closed", default=False)
-    closed_date = models.DateField("Close Date", null=True, blank=True)
-    closed_price = models.FloatField("Latest / Close Price", null=True, blank=True)
-    closed_reason = models.IntegerField('Closed Reason', choices=CLOSED_REASONS, default=0, null=True, blank=True)
-    is_archived = models.BooleanField("Is Archived", default=False, db_index=True)
-
-    created_at = models.DateTimeField('Created At', auto_now_add=True)
-    
-    @property
-    def t_plus(self):
-
-        if not self.buy_date:
-            return None
-        
-        return tplus(self.buy_date, self.closed_date)
-        
-    @property
-    def profit(self):
-        if not self.closed_price or not self.buy_price:
-            return None
-        return 100 * (self.closed_price - self.buy_price) / self.buy_price
     

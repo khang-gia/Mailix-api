@@ -1,4 +1,4 @@
-"""tttmail URL Configuration
+"""SIEUCOPHIEU URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/3.2/topics/http/urls/
@@ -14,8 +14,56 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
+from core.views import login
+# from core.views import login, register, logout, generate_otp, verify_otp, GoogleLogin, reset_password
+
+from django.conf.urls.static import static
+from django.conf import settings
+
+admin.site.site_header = 'TTT Mail'
+admin.site.site_title = 'TTT Mail'
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api-auth/', include('rest_framework.urls')),
+    path('api/v1/', include([
+        # path('accounts/', include('allauth.urls')),
+        path('auth/', include([
+            # path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+            # path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+            # path('logout/', logout, name='logout'),
+            path('login/', login, name='login'),
+            path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+            # path('verify/', TokenVerifyView.as_view(), name='token_verify'),
+            # path('register/', register, name='register'),
+            # path('registration/', include('dj_rest_auth.registration.urls')),
+            # path('google/', GoogleLogin.as_view(), name='google_login'),
+            # path('otp/', include([
+            #     path('generate/', generate_otp, name='generate_otp'),
+            #     path('verify/', verify_otp, name='verify_otp'),
+            # ])),
+            # path('reset_password/', reset_password, name='reset_password'),
+            # path('', include('dj_rest_auth.urls')),
+        ])),
+        
+        path('core/', include("core.urls")),
+        # path('stock/', include("stock.urls")),
+        # path('market/', include("market.urls")),
+        path('consult/', include("consult.urls")),
+        # path('fa/', include('fa.urls')),
+        # path('analyzer/', include("analyzer.urls")),
+        # path('download/', include("download.urls")),
+        # path('upload/', include("upload.urls")),
+    ])),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    
