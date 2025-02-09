@@ -17,26 +17,19 @@ class NotificationSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'message', 'symbol_list', 'related_symbols', 'created_at', 'type', 'link_to']
 
 class ArticleNoAuthSerializer(serializers.ModelSerializer):
-    symbols = serializers.SerializerMethodField()
     class Meta:
         model = Article
         exclude = ('content', 'related_symbols')
 
-    def get_symbols(self, instance):
-        return []
     
 class ArticleSerializer(serializers.ModelSerializer):
-    symbols = serializers.SerializerMethodField()
     class Meta:
         model = Article
         exclude = ('content', 'related_symbols')
 
-    def get_symbols(self, instance):
-        return instance.get_symbol_list()
     
 class ArticleDetailSerializer(serializers.ModelSerializer):
     content = serializers.SerializerMethodField()
-    symbols = serializers.SerializerMethodField()
     created_by = AuthorSerializer()
     class Meta:
         model = Article
@@ -52,10 +45,6 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
                 return str(instance.content.html)
 
         return ''    
-        
-    
-    def get_symbols(self, instance):
-        return instance.get_symbol_list()
     
 class ArticleTypeSerializer(serializers.ModelSerializer):
 

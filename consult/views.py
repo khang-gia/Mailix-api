@@ -31,10 +31,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
     
     
 class ArticleFilter(FilterSet):
-  related_symbols = django_filters.CharFilter(field_name="related_symbols", lookup_expr='icontains')
   class Meta:
     model = Article
-    fields = ['related_symbols', 'article_type', 'created_by']
+    fields = ['article_type', 'created_by']
 
 class ArticleViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Article.objects.all()

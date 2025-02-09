@@ -75,7 +75,7 @@ class UserFilter(FilterSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    filter_class = UserFilter
+    filterset_class = UserFilter
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
