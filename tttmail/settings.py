@@ -170,3 +170,9 @@ try:
 except Exception as e:
     print("Failed to load local_settings", e)
     pass
+
+
+STATIC_URL = '/static/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
