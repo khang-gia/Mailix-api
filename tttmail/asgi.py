@@ -23,19 +23,19 @@ os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
 django_asgi_app = get_asgi_application()
 
-from core.consumers import WsConsumer
+# from core.consumers import WsConsumer
 
 application = ProtocolTypeRouter({
     # Django's ASGI application to handle traditional HTTP requests
     "http": django_asgi_app,
 
     # WebSocket handler
-    "websocket": AllowedHostsOriginValidator(
-        # ChannelsTokenAuthMiddleware(
-        AuthMiddlewareStack(
-            URLRouter([
-                path("ws/", WsConsumer.as_asgi()),
-            ])
-        )
-    ),
+    # "websocket": AllowedHostsOriginValidator(
+    #     # ChannelsTokenAuthMiddleware(
+    #     AuthMiddlewareStack(
+    #         URLRouter([
+    #             path("ws/", WsConsumer.as_asgi()),
+    #         ])
+    #     )
+    # ),
 })
