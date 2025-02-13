@@ -20,7 +20,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from core.views import login
+from core.views import login, register
 # from core.views import login, register, logout, generate_otp, verify_otp, GoogleLogin, reset_password
 
 from django.conf.urls.static import static
@@ -41,7 +41,7 @@ urlpatterns = [
             path('login/', login, name='login'),
             path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
             # path('verify/', TokenVerifyView.as_view(), name='token_verify'),
-            # path('register/', register, name='register'),
+            path('register/', register, name='register'),
             # path('registration/', include('dj_rest_auth.registration.urls')),
             # path('google/', GoogleLogin.as_view(), name='google_login'),
             # path('otp/', include([

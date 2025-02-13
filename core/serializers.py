@@ -83,3 +83,24 @@ class HotEventSerializer(serializers.ModelSerializer):
     model = HotEvent
     fields = '__all__'
 
+
+class CredentialsSerializer(serializers.Serializer):
+  username = serializers.EmailField(max_length=100, required=True)
+  password = serializers.CharField(max_length=100, required=True)
+  first_name = serializers.CharField(max_length=100, required=False)
+  
+  def validate(self, data):
+    super().validate(data)
+    
+    username = data.get('username', None)
+    
+    if User.objects.filter(username=username).exists():
+      raise serializers.ValidationError({'username': ['Email đã tồn tại. Vui lòng thử lại với email khác.']})
+
+    return data
+  
+  def to_representation(self, instance):
+    data = super().to_representation(instance)
+    data['email'] = data['username']
+    return data
+  

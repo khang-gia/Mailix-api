@@ -4,7 +4,8 @@ from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEv
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from .serializers import UserSerializer, ProfileSerializer, LoginSerializer, SystemNotificationSerializer, FeedbackSerializer, HappeningEventSerializer, HotEventSerializer
+from .serializers import UserSerializer, ProfileSerializer, LoginSerializer, SystemNotificationSerializer, FeedbackSerializer, HappeningEventSerializer, HotEventSerializer,\
+  CredentialsSerializer
 from django_filters.rest_framework import FilterSet
 import django_filters
 from django.db.models import Q
@@ -30,6 +31,19 @@ def update_profile(request):
             print(profile_serializer.errors)
         
     return Response(user_serializer.data, status=status.HTTP_200_OK)
+@api_view(['POST'])
+@permission_classes([])
+def register(request, *args):
+  credential = CredentialsSerializer(data=request.data)
+  if not credential.is_valid():
+    return Response(credential.errors, status=status.HTTP_400_BAD_REQUEST)
+  
+  user = User.objects.create_user(**credential.data)
+  user_serializer = UserSerializer(user)
+
+  # code = otp.generate(user.email)
+  # send_otp(user.email, code)
+  return Response(user_serializer.data, status=status.HTTP_201_CREATED)
 
 @api_view(['GET', 'PUT'])
 def profile_api(request):
