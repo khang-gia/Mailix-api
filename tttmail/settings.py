@@ -91,6 +91,12 @@ REST_AUTH = {
     'JWT_AUTH_COOKIE_ENFORCE_CSRF_ON_UNAUTHENTICATED': False,
     'SESSION_LOGIN': False
 }
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=7),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': False,
+    'JWT_AUTH_COOKIE_USE_CSRF': False
+}
 
 ROOT_URLCONF = 'tttmail.urls'
 
