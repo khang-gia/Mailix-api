@@ -83,6 +83,15 @@ REST_FRAMEWORK = {
         '%d %B %Y', '%d %B, %Y',            # '25 October 2006', '25 October, 2006'
     ]
 }
+
+REST_AUTH = {
+    'USE_JWT': True,
+    'JWT_AUTH_RETURN_EXPIRATION': True,
+    'JWT_AUTH_COOKIE_USE_CSRF': False,
+    'JWT_AUTH_COOKIE_ENFORCE_CSRF_ON_UNAUTHENTICATED': False,
+    'SESSION_LOGIN': False
+}
+
 ROOT_URLCONF = 'tttmail.urls'
 
 TEMPLATES = [
