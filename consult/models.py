@@ -79,19 +79,17 @@ class TelegramPushChannel(models.Model):
 
     def __str__(self):
         return self.channel_id
-
-CLOSED_REASONS = [
-    (0, 'OPENING'),
-    (1, 'REACHED TARGET'),
-    (2, 'STOP LOSS'),
-    (3, 'MACROECONOMICS'),
-    (4, 'RE-ARRANGE PORFOLIO'),
-    (5, 'OTHERS')
-
-]
-STRATEGIES = (
-    ('T', 'Trading'),
-    ('L', 'Long Term'),
-    ('V', 'Value'),
-)
     
+LANDING_PAGE_IMAGE_POS = (
+    (1, 'Carousel'),
+    (2, 'Background'),
+    (3, 'Footer'),
+    (4, 'Extension'),
+    (9, 'Others')
+)
+class LandingPageImages(models.Model):
+    thumb = models.ImageField("Hình ảnh", upload_to="articles", null=True, blank=True)
+    position = models.IntegerField("Vị trí", choices=LANDING_PAGE_IMAGE_POS, default=1)
+    name = models.CharField("Tên", null=True, blank=True, max_length=200)
+    def __str__(self):
+        return self.name

@@ -14,7 +14,7 @@ from .models import Notification, Article, ArticleType
 
 # from invest.models import UserStockList
 
-from django.db.models import Q
+from django.db.models import Q, F
 
 # Create your views here.
 class NotificationViewSet(viewsets.ModelViewSet):
@@ -31,9 +31,15 @@ class NotificationViewSet(viewsets.ModelViewSet):
     
     
 class ArticleFilter(FilterSet):
-  class Meta:
-    model = Article
-    fields = ['article_type', 'created_by']
+    latest_landing_article = django_filters.BooleanFilter(method='latest_landing_article_filter')
+    class Meta:
+        model = Article
+        fields = ['article_type', 'created_by']
+
+    def latest_landing_article_filter(self, queryset, name, value):
+        if not value: return queryset
+        print('latest_landing_article', queryset.filter(article_type__value= 1, published_at__isnull=False).order_by('published_at'))
+        return queryset.filter(article_type__value=1, published_at__isnull=False).order_by('published_at')
 
 class ArticleViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Article.objects.all()
