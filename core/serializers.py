@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import *
-
+from system.serializers import DepartmentListSerializer
 # class ProfileSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = Profile
@@ -103,4 +103,22 @@ class CredentialsSerializer(serializers.Serializer):
     data = super().to_representation(instance)
     data['email'] = data['username']
     return data
+
+
+class ProfileHRListSerializer(serializers.ModelSerializer):
+    department_name = serializers.CharField(source='department__name', read_only=True)
+    class Meta:
+      model = ProfileHR
+      fields = '__all__'
   
+class ProfileHRDetailSerializer(serializers.ModelSerializer):
+
+    class Meta:
+      model = ProfileHR
+      fields = '__all__'
+  
+class ProfileHRSerializer(serializers.ModelSerializer):
+
+    class Meta:
+      model = ProfileHR
+      fields = '__all__'

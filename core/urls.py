@@ -10,5 +10,6 @@ router.register(r'system_notifications', views.SystemNotificationViewSet)
 router.register(r'happening_events', views.HappeningEventViewSet)
 router.register(r'feedbacks', views.FeedbackViewSet)
 router.register(r'hot_events', views.HotEventViewSet)
+router.register(r'profile_hrs', views.ProfileHRViewSet)
 urlpatterns = router.urls + [
 ]

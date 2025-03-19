@@ -2,8 +2,8 @@ from django.db import models
 from django.dispatch.dispatcher import receiver
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
-from django_softdelete.models import SoftDeleteModel
-
+from core.mixins.base_model import BaseModelMixin, BaseCreateDeleteModel, BaseCreateUpdateModel
+from simple_history.models import HistoricalRecords
 # Create your models here.
 
 GENDER_CHOICES = (
@@ -112,43 +112,28 @@ TYPE_PASSPORT_CHOICES = (
   (2, "Diplomatic"),
 )
 
-class BaseCreateDeleteModel(SoftDeleteModel):
-    created_at = models.DateTimeField('Created At', auto_now_add=True)
-    is_archived = models.BooleanField('Is Archived', default=False)
-    archived_at = models.DateTimeField('Archived At', auto_now = True, null=True)
-    class Meta:
-        abstract = True
-
-class BaseCreateUpdateModel(BaseCreateDeleteModel):
-    updated_at = models.DateTimeField('Updated At', auto_now=True)
-
-    class Meta:
-        abstract = True
-
-class Department(BaseCreateUpdateModel):
-    code = models.CharField("Code", max_length=20)
-    name = models.CharField("Name", max_length=50)
-    location = models.CharField("Location", max_length=200, null=True, blank=True)
-    description = models.TextField("Description", null=True, blank=True)
-    parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="childen")
-
-    def _str_(self) -> str:
-        return "Department <{}> {}".format(self.pk, self.name)
-
 class Title(models.Model):
-    code = models.CharField("Code", max_length=20)
-    name = models.CharField("Name", max_length=50)
+  code = models.CharField("Code", max_length=20)
+  name = models.CharField("Name", max_length=50)
 
-    def __str__(self):
-        return "Title <{}> {}".format(self.pk, self.name)
-class Nationality(BaseCreateUpdateModel):
+  def __str__(self):
+      return "Title <{}> {}".format(self.pk, self.name)
+class Position(models.Model):
+  code = models.CharField("Code", max_length=20)
+  name = models.CharField("Name", max_length=50)
+  description = models.TextField('Description',null=True, blank=True)
+
+  def __str__(self):
+    return "Position <{}> {}".format(self.code, self.name)
+
+class Nationality(BaseModelMixin):
     code = models.CharField("Code", max_length=20)
     name = models.CharField("Name", max_length=50)
 
     def __str__(self):
         return "Nationality <{}> {}".format(self.pk, self.name)
 
-class TimekeepingLocation(BaseCreateUpdateModel):
+class TimekeepingLocation(BaseModelMixin):
     code = models.CharField("Code", max_length=20)
     name = models.CharField("Name", max_length=50)
 
@@ -163,7 +148,7 @@ class Bank(models.Model):
         return "Bank <{}> {}".format(self.pk, self.name)
 
 class UserBankAccount(models.Model):
-    user = models.ForeignKey("auth.User", on_delete=models.CASCADE, related_name='bank_accounts')
+    user = models.ForeignKey("ProfileHR", on_delete=models.CASCADE, related_name='bank_accounts')
     bank = models.ForeignKey("core.Bank", on_delete=models.CASCADE, related_name='users')
     account_number = models.CharField("Account Number", max_length=20)
     account_name = models.CharField("Account Name", max_length=200)
@@ -190,7 +175,7 @@ FAMILY_RELATIONSHIP_CHOICES = (
   (15, "Niece"),
 )
 class FamilyRelationship(models.Model):
-    user = models.ForeignKey("auth.User", on_delete=models.CASCADE, related_name='family_relationships')
+    user = models.ForeignKey("ProfileHR", on_delete=models.CASCADE, related_name='family_relationships')
     relationship = models.IntegerField("Relationship", choices=FAMILY_RELATIONSHIP_CHOICES, null=True, blank=True)
     full_name = models.CharField("Full Name", max_length=200, null=True, blank=True)
     dob = models.DateField("Date of Birth", null=True, blank=True)
@@ -225,7 +210,7 @@ DEGREE_CHOICES = (
   (2, "Doctor"),
 )
 class ProfessionalQualification(models.Model):
-    user = models.ForeignKey("auth.User", on_delete=models.CASCADE, related_name='professional_qualifications')
+    user = models.ForeignKey("ProfileHR", on_delete=models.CASCADE, related_name='professional_qualifications')
     from_date = models.DateField("From Date", null=True, blank=True)
     to_date = models.DateField("To Date", null=True, blank=True)
     type_of_edu= models.IntegerField("Type", choices=PROFESSIONAL_QUALIFICATION_TYPE_CHOICES)
@@ -253,9 +238,10 @@ class CommunistPartyMember(models.Model):
     return "Communist Party Member <{}> {}".format(self.user, self.card_no)
 
 
-class Profile(BaseCreateUpdateModel):
-    user = models.OneToOneField("auth.User", on_delete=models.CASCADE, related_name='profile')
-    department = models.ForeignKey("core.Department", on_delete=models.CASCADE, related_name="profile", null=True, blank=True)
+class ProfileHR(BaseCreateUpdateModel):
+    full_name = models.CharField("Full Name", max_length=200, db_index=True)
+    user = models.OneToOneField("auth.User", on_delete=models.CASCADE, related_name='profile_hr', db_index=True)
+    # department = models.ForeignKey("core.Department", on_delete=models.CASCADE, related_name="profile", null=True, blank=True)
     employee_code = models.CharField("Employee Code", max_length=50)
     #Personal Info
     timekeeping_id = models.CharField("Timekeeping ID", max_length=50, null=True, blank=True)
@@ -304,8 +290,10 @@ class Profile(BaseCreateUpdateModel):
     current_address = models.CharField('Current Address', max_length=200, null=True, blank=True)
     public_name = models.CharField('Bút danh', max_length=50, null=True, blank=True)
 
+    history = HistoricalRecords()
+
     def __str__(self):
-        return "Profile<{}> {}".format(self.pk, self.user)
+        return "ProfileHR<{}> {}".format(self.pk, self.user)
 
 
 class SystemNotification(models.Model):
@@ -351,3 +339,61 @@ class HappeningEvent(models.Model):
   
   def __str__(self):
         return self.title
+
+USER_STATUSES = (
+  (0, 'Created'),
+  (1, 'Active'),
+  (2, 'Pending'),
+  (3, 'Locked'),
+  (9, 'Deactive')
+)
+class Profile(BaseCreateUpdateModel):
+  group = models.ForeignKey('system.SystemGroup', on_delete=models.SET_NULL, null=True, blank=True, related_name="profiles", db_index=True)
+  is_system_admin = models.BooleanField('Is System Admin', default=False, db_index=True)
+  user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', db_index=True)
+  is_adjus_permission = models.BooleanField('Is Adjust Permission',default=False, db_index=True)
+  status = models.IntegerField('Status', choices=USER_STATUSES, default=0, null=True, blank=True, db_index=True)
+  active_date = models.DateField('Active Date', null=True, blank=True, db_index=True)
+
+  def __str__(self):
+      return 'UserProfile-{}'.format(self.user)
+
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+	if created:
+		Profile.objects.create(user=instance)
+
+CONTRACT_TYPES = (
+  (0, 'Probationary'),
+  (1, 'Apprenticeship'),
+  (2, '6-month'),
+  (3, '1-year'),
+  (4, '3-year'),
+  (5, 'Part-time'),
+  (6, 'Indefinite-term'),
+  
+)
+# LEVELS = (
+#   (0,'Level 1'),
+#   (0,'Level 1'),
+#   (0,'Level 1'),
+#   (0,'Level 1'),
+#   (0,'Level 1'),
+#   (0,'Level 1'),
+#   (0,'Level 1'),
+#   (0,'Level 1'),
+#   (0,'Level 1'),
+#   (0,'Level 1'),
+  
+# )
+# class Contract(BaseCreateUpdateModel):
+#   code = models.CharField("Code", max_length=100)
+#   contract_type = models.IntegerField('Type', choices=CONTRACT_TYPES, default=0, db_index=True)
+#   department = models.ForeignKey("system.Department", on_delete=models.SET_NULL, related_name="contracts", null=True, blank=True, db_index=True)
+#   title = models.ForeignKey('core.Title', on_delete=models.SET_NULL, null=True, blank=True, related_name='contracts', db_index=True)
+#   position = models.ForeignKey('core.Position',on_delete=models.SET_NULL, null=True, blank=True,related_name='contracts', db_index=True)
+#   level = models.IntegerField('Level', choices=)
+
+
+ 

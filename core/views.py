@@ -1,11 +1,11 @@
 from django.shortcuts import render
-from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent
+from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR
 # Create your views here.
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import UserSerializer, ProfileSerializer, LoginSerializer, SystemNotificationSerializer, FeedbackSerializer, HappeningEventSerializer, HotEventSerializer,\
-  CredentialsSerializer
+  CredentialsSerializer, ProfileHRListSerializer, ProfileHRDetailSerializer, ProfileHRSerializer
 from django_filters.rest_framework import FilterSet
 import django_filters
 from django.db.models import Q
@@ -15,7 +15,6 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import action
-
 def update_profile(request):
     data = request.data
     user_serializer = UserSerializer(request.user, data = data)
@@ -90,7 +89,7 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     filterset_class = UserFilter
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return User.objects.filter(is_active=True)
@@ -189,3 +188,23 @@ class HotEventViewSet(viewsets.ReadOnlyModelViewSet):
   serializer_class = HotEventSerializer
   ordering_fields = ['id']
   ordering = ('-id',)
+
+class ProfileHRFilter(FilterSet):
+  class Meta:
+    model = ProfileHR
+    fields = ['full_name',]
+
+class ProfileHRViewSet(viewsets.ModelViewSet):
+  queryset = ProfileHR.objects.all()
+  serializer_class = ProfileHRSerializer
+  # filterset_class = ProfileHRFilter
+  # permission_classes = [IsAuthenticated]
+  ordering_fields = ['id']
+  ordering = ('-id',)
+  
+  def get_serializer_class(self):
+    if self.action == 'list':
+      return ProfileHRListSerializer
+    elif self.action == 'retrieve':
+      return ProfileHRDetailSerializer
+    return ProfileHRSerializer
