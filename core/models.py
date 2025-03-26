@@ -4,6 +4,8 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from core.mixins.base_model import BaseModelMixin, BaseCreateDeleteModel, BaseCreateUpdateModel
 from simple_history.models import HistoricalRecords
+import filetype
+
 # Create your models here.
 
 GENDER_CHOICES = (
@@ -237,10 +239,10 @@ class CommunistPartyMember(models.Model):
   def __str__(self):
     return "Communist Party Member <{}> {}".format(self.user, self.card_no)
 
-
 class ProfileHR(BaseCreateUpdateModel):
     full_name = models.CharField("Full Name", max_length=200, db_index=True)
-    user = models.OneToOneField("auth.User", on_delete=models.CASCADE, related_name='profile_hr', db_index=True)
+    user = models.OneToOneField("auth.User", on_delete=models.SET_NULL, related_name='profile_hr', db_index=True, null=True, blank=True)
+    avatar = models.ImageField("Avatar", upload_to='avatars', null=True, blank=True)
     # department = models.ForeignKey("core.Department", on_delete=models.CASCADE, related_name="profile", null=True, blank=True)
     employee_code = models.CharField("Employee Code", max_length=50)
     #Personal Info
