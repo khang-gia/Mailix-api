@@ -163,3 +163,4 @@ cython_debug/
 articles/
 local_settings.py
 media/
+dump.rdb
