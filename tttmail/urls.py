@@ -53,13 +53,11 @@ urlpatterns = [
         ])),
         
         path('core/', include("core.urls")),
-        # path('stock/', include("stock.urls")),
-        # path('market/', include("market.urls")),
         path('consult/', include("consult.urls")),
         # path('fa/', include('fa.urls')),
         # path('analyzer/', include("analyzer.urls")),
         # path('download/', include("download.urls")),
-        # path('upload/', include("upload.urls")),
+        path('upload/', include("upload.urls")),
     ])),
 ]
 

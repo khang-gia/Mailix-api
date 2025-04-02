@@ -14,7 +14,8 @@ from pathlib import Path
 from corsheaders.defaults import default_headers
 import os
 from datetime import timedelta
-
+from dotenv import load_dotenv
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -29,7 +30,7 @@ SECRET_KEY = 'django-insecure-_*6u$tfx9q55#@37%gbl4b9@ct&$74e1%_0c_1ehdi+n3gib^d
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
+print('os.get',os.getenv)
 
 # Application definition
 
@@ -49,6 +50,7 @@ INSTALLED_APPS = [
     'core',
     'consult',
     'system',
+    'upload'
 ]
 
 MIDDLEWARE = [
@@ -182,6 +184,62 @@ CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000'
 CORS_ALLOW_HEADERS = list(default_headers) + []
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'app': {
+            'format': '[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
+            'datefmt': '%d/%m/%Y %H:%M:%S'
+        },
+    },
+    'handlers': {        
+        "socket": {
+            "class": "logging.handlers.SocketHandler",
+            "host": "localhost",
+            "port": 9020
+        }
+
+    },
+    'loggers': {
+        'app': {
+            'handlers': ['socket'],
+            'level': 'INFO',
+        },
+        'upload': {
+            'handlers': ['socket'],
+            'level': 'INFO',
+        },
+        'webhook': {
+            'handlers': ['socket'],
+            'level': 'INFO',
+        },
+        'background': {
+            'handlers': ['socket'],
+            'level': 'INFO',
+        }
+    },
+}
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.getenv('CACHE_DEFAULT_LOCATION', 'redis://127.0.0.1:6379/1'),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "TIMEOUT": 60*60*12, # 12 hours
+    },
+}
+CELERY_DEFAULT_QUEUE = os.getenv('CELERY_DEFAULT_QUEUE', '')
 try:
     from .local_settings import *
 except Exception as e:
