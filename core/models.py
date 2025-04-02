@@ -2,7 +2,7 @@ from django.db import models
 from django.dispatch.dispatcher import receiver
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
-from core.mixins.base_model import BaseModelMixin, BaseCreateDeleteModel, BaseCreateUpdateModel
+from core.mixins.base_model import BaseModel, BaseCreateDeleteModel, BaseCreateUpdateModel
 from simple_history.models import HistoricalRecords
 import filetype
 
@@ -123,14 +123,14 @@ class Position(models.Model):
   def __str__(self):
     return "Position <{}> {}".format(self.code, self.name)
 
-class Nationality(BaseModelMixin):
+class Nationality(models.Model):
     code = models.CharField("Code", max_length=20)
     name = models.CharField("Name", max_length=50)
 
     def __str__(self):
         return "Nationality <{}> {}".format(self.pk, self.name)
 
-class TimekeepingLocation(BaseModelMixin):
+class TimekeepingLocation(BaseModel):
     code = models.CharField("Code", max_length=20)
     name = models.CharField("Name", max_length=50)
 
@@ -255,7 +255,6 @@ class ProfileHR(BaseCreateUpdateModel):
     ethnicity = models.CharField('Ethnicity', max_length=20, null=True, blank=True)
     military_status = models.IntegerField('Military Status', choices=MILITARY_STATUS_CHOICES, null=True, blank=True, default=0)
     marital_status = models.IntegerField('Marital Status', choices=MARITAL_STATUS_CHOICES, null=True, blank=True, default=0)
-    # nationality = models.ForeignKey(Nationality, on_delete=models.SET_NULL, null=True, blank=True)
     nationality = models.CharField('Nationality', max_length=30, null=True, blank=True, default=0)
     tax_code = models.CharField('Tax Code', max_length=20, null=True, blank=True)
     blood_presure = models.CharField('Blood Presure', max_length=20, null=True, blank=True)

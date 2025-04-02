@@ -2,7 +2,7 @@ from django.db import models
 # from core.models import BaseCreateDeleteModel, BaseCreateUpdateModel
 from django.contrib.auth.models import User, Group
 
-from core.mixins.base_model import BaseModelMixin, BaseCreateDeleteModel, BaseCreateUpdateModel
+from core.mixins.base_model import BaseModel, BaseCreateDeleteModel, BaseCreateUpdateModel
 from simple_history.models import HistoricalRecords
 
 
@@ -54,7 +54,7 @@ class Department(BaseCreateUpdateModel):
         return "Department <{}> {}".format(self.pk, self.name)
 
 
-class AccountType(BaseModelMixin):
+class AccountType(BaseModel):
     name = models.CharField("Name", max_length=50, db_index=True)
     code = models.CharField("Code", max_length=20, null=True, blank=True, db_index=True)
     description = models.TextField("Description", null=True, blank=True)

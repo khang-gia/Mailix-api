@@ -9,8 +9,8 @@ from django_softdelete.models import SoftDeleteModel
 from core.mixins import SoftDeleteManager
 
 
-class BaseModelMixin(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+class BaseModel(models.Model):
+    # id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     metadata = models.JSONField(_("metadata"), null=True, blank=True, default=dict)
     is_deleted = models.BooleanField(_("is_deleted"), default=False)
     is_active = models.BooleanField(_("is_active"), default=True)
@@ -36,7 +36,7 @@ class BaseModelMixin(models.Model):
         self.save()
 
     def hard_delete(self):
-        super(BaseModelMixin, self).delete()
+        super(BaseModel, self).delete()
 
     def restore(self):
         self.is_deleted = False
