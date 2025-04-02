@@ -7,11 +7,6 @@ from simple_history.models import HistoricalRecords
 import filetype
 
 # Create your models here.
-
-GENDER_CHOICES = (
-  ('MALE', 'Male'),
-  ('FEMALE', 'Female'),
-)
 ROLE_CHOICES = (
   ('U', 'User'),
   ('M', 'Manager'),
@@ -251,16 +246,17 @@ class ProfileHR(BaseCreateUpdateModel):
     dob = models.DateField("Date of Birth", null=True, blank=True)
     pob = models.CharField("Place of Birth", max_length=200, null=True, blank=True)
     place_of_origin = models.CharField("Place of Origin", max_length=200, null=True, blank=True)
-    gender = models.CharField("Gender", max_length=10, choices=GENDER_CHOICES)
+    gender = models.CharField("Gender", max_length=10, null=True, blank=True)
     phone = models.CharField("Phone", max_length=20, null=True, blank=True)
     phone_other = models.CharField("Mobile", max_length=20, null=True, blank=True)
     title = models.ForeignKey('core.Title', on_delete=models.SET_NULL, null=True, blank=True)
     role = models.CharField('Role', max_length=5, choices=ROLE_CHOICES, default='U')
-    religion = models.IntegerField('Religion', choices=RELIGION_CHOICES, null=True, blank=True, default=0)
-    ethnicity = models.IntegerField('Ethnicity', choices=ETHNICITY_CHOICES, null=True, blank=True, default=0)
+    religion = models.CharField('Religion',max_length=20, null=True, blank=True)
+    ethnicity = models.CharField('Ethnicity', max_length=20, null=True, blank=True)
     military_status = models.IntegerField('Military Status', choices=MILITARY_STATUS_CHOICES, null=True, blank=True, default=0)
     marital_status = models.IntegerField('Marital Status', choices=MARITAL_STATUS_CHOICES, null=True, blank=True, default=0)
-    nationality = models.ForeignKey(Nationality, on_delete=models.SET_NULL, null=True, blank=True)
+    # nationality = models.ForeignKey(Nationality, on_delete=models.SET_NULL, null=True, blank=True)
+    nationality = models.CharField('Nationality', max_length=30, null=True, blank=True, default=0)
     tax_code = models.CharField('Tax Code', max_length=20, null=True, blank=True)
     blood_presure = models.CharField('Blood Presure', max_length=20, null=True, blank=True)
     join_date = models.DateField('Join Date', null=True, blank=True)
@@ -295,7 +291,7 @@ class ProfileHR(BaseCreateUpdateModel):
     history = HistoricalRecords()
 
     def __str__(self):
-        return "ProfileHR<{}> {}".format(self.pk, self.user)
+        return "ProfileHR<{}> {}".format(self.pk, self.full_name)
 
 
 class SystemNotification(models.Model):
