@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+APP_NAME_PREFIX = os.getenv('APP_NAME_PREFIX','hrm/')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
@@ -30,7 +30,6 @@ SECRET_KEY = 'django-insecure-_*6u$tfx9q55#@37%gbl4b9@ct&$74e1%_0c_1ehdi+n3gib^d
 DEBUG = True
 
 ALLOWED_HOSTS = []
-print('os.get',os.getenv)
 
 # Application definition
 

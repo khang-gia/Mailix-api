@@ -26,13 +26,14 @@ from core.views import login, register
 from django.conf.urls.static import static
 from django.conf import settings
 
-admin.site.site_header = 'TTT Mail'
-admin.site.site_title = 'TTT Mail'
+admin.site.site_header = 'Titaca'
+admin.site.site_title = 'Titaca'
+app_name_prefix = settings.APP_NAME_PREFIX
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api-auth/', include('rest_framework.urls')),
-    path('api/v1/', include([
+    path(app_name_prefix + 'admin/', admin.site.urls),
+    path(app_name_prefix + 'api-auth/', include('rest_framework.urls')),
+    path(app_name_prefix + 'api/v1/', include([
         # path('accounts/', include('allauth.urls')),
         path('auth/', include([
             # path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
