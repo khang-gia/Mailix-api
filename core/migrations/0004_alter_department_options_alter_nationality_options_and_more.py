@@ -3,6 +3,12 @@
 import uuid
 from django.db import migrations, models
 
+def generate_uuids(apps, schema_editor):
+    # Generate UUIDs for existing rows
+    Model = apps.get_model('core', 'Department')  # Replace 'Department' with the model name
+    for row in Model.objects.all():
+        row.uuid = uuid.uuid4()
+        row.save()
 
 class Migration(migrations.Migration):
 
@@ -161,10 +167,20 @@ class Migration(migrations.Migration):
             name='deleted_at',
             field=models.DateTimeField(blank=True, default=None, null=True, verbose_name='deleted_at'),
         ),
+        migrations.AddField(
+            model_name='department',
+            name='uuid',
+            field=models.UUIDField(default=uuid.uuid4, editable=False, null=True),
+        ),
+        migrations.RunPython(generate_uuids),
         migrations.AlterField(
             model_name='department',
             name='id',
             field=models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False),
+        ),
+        migrations.RemoveField(
+            model_name='department',
+            name='uuid',
         ),
         migrations.AlterField(
             model_name='department',
