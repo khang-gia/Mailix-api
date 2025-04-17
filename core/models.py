@@ -79,9 +79,9 @@ MILITARY_STATUS_CHOICES = (
   (2, "Not required"),
 )
 MARITAL_STATUS_CHOICES = (
-  (0, "Single"),
-  (1, "Married"),
-  (2, "Divorced"),
+  ('Single', "Single"),
+  ('Married', "Married"),
+  ('Divorced', "Divorced"),
 )
 EDUCATION_LEVEL_CHOICES = (
   (1, "1/12"),
@@ -238,7 +238,7 @@ class ProfileHR(BaseCreateUpdateModel):
     full_name = models.CharField("Full Name", max_length=200, db_index=True)
     user = models.OneToOneField("auth.User", on_delete=models.SET_NULL, related_name='profile_hr', db_index=True, null=True, blank=True)
     avatar = models.ImageField("Avatar", upload_to='avatars', null=True, blank=True)
-    # department = models.ForeignKey("core.Department", on_delete=models.CASCADE, related_name="profile", null=True, blank=True)
+    department = models.ForeignKey("system.Department", on_delete=models.SET_NULL, related_name="profile_hr", null=True, blank=True)
     employee_code = models.CharField("Employee Code", max_length=50)
     #Personal Info
     timekeeping_id = models.CharField("Timekeeping ID", max_length=50, null=True, blank=True)
@@ -254,14 +254,14 @@ class ProfileHR(BaseCreateUpdateModel):
     religion = models.CharField('Religion',max_length=20, null=True, blank=True)
     ethnicity = models.CharField('Ethnicity', max_length=20, null=True, blank=True)
     military_status = models.IntegerField('Military Status', choices=MILITARY_STATUS_CHOICES, null=True, blank=True, default=0)
-    marital_status = models.IntegerField('Marital Status', choices=MARITAL_STATUS_CHOICES, null=True, blank=True, default=0)
+    marital_status = models.CharField('Marital Status',max_length=20, choices=MARITAL_STATUS_CHOICES, null=True, blank=True, default='Single')
     nationality = models.CharField('Nationality', max_length=30, null=True, blank=True, default=0)
     tax_code = models.CharField('Tax Code', max_length=20, null=True, blank=True)
     blood_presure = models.CharField('Blood Presure', max_length=20, null=True, blank=True)
     join_date = models.DateField('Join Date', null=True, blank=True)
     actual_sign_date = models.DateField('Actual Sign Date', null=True, blank=True)
     educaional_level = models.IntegerField('Educational Level', choices=EDUCATION_LEVEL_CHOICES, null=True, blank=True, default=0)
-    years_of_experience = models.IntegerField('Years of Experience', null=True, blank=True)
+    years_of_experience = models.CharField('Years of Experience',max_length=20, null=True, blank=True)
     major = models.CharField('Major', max_length=200, null=True, blank=True)
     highest_qualification = models.CharField('Highest Professional Qualification', max_length=200, null=True, blank=True)
     direct_manager = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='manage_users')

@@ -21,17 +21,33 @@ class UserSerializer(serializers.ModelSerializer):
     email = serializers.CharField(required=True)
     first_name = serializers.CharField(required=True)
     display_name = serializers.SerializerMethodField(read_only=True)
-    
+    avatar = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = User
         exclude = ['password', 'user_permissions', 'is_superuser', 'is_staff']
 
     def get_display_name(self, obj):
-        # if obj.first_name:
-        #     return "{} {}".format(obj.first_name, obj.last_name).strip()
-        # return obj.username
-        return '%s %s'%(obj.first_name, obj.last_name) if obj.first_name else obj.username
+        return '%s %s'%(obj.first_name, obj.last_name) if obj.first_name else obj.username if not hasattr(obj, 'profile_hr') else obj.profile_hr.full_name
 
+    def get_avatar(self, obj):
+      request = self.context.get('request')
+      if obj.profile_hr and obj.profile_hr.avatar:
+        avatar_url = obj.profile_hr.avatar.url
+        if request is not None:
+          return request.build_absolute_uri(avatar_url)
+
+        return avatar_url
+      return None
+class UserListSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField(read_only=True)
+    class Meta:
+        model = User
+        fields = '__all__'
+
+    def get_full_name(self, obj):
+      return '%s %s' % (obj.first_name, obj.last_name) if obj.first_name else obj.username if not hasattr(obj, 'profile_hr') else obj.profile_hr.full_name
+
+    
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
@@ -118,7 +134,7 @@ class ProfileHRDetailSerializer(serializers.ModelSerializer):
       fields = '__all__'
   
 class ProfileHRSerializer(serializers.ModelSerializer):
-
+    
     class Meta:
       model = ProfileHR
       fields = '__all__'

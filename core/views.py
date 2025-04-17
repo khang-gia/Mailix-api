@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import UserSerializer, ProfileSerializer, LoginSerializer, SystemNotificationSerializer, FeedbackSerializer, HappeningEventSerializer, HotEventSerializer,\
-  CredentialsSerializer, ProfileHRListSerializer, ProfileHRDetailSerializer, ProfileHRSerializer
+  CredentialsSerializer, ProfileHRListSerializer, ProfileHRDetailSerializer, ProfileHRSerializer, UserListSerializer
 from django_filters.rest_framework import FilterSet
 import django_filters
 from django.db.models import Q
@@ -15,6 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import action
+
 def update_profile(request):
     data = request.data
     user_serializer = UserSerializer(request.user, data = data)
@@ -94,10 +95,15 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return User.objects.filter(is_active=True)
     
+    def get_serializer_class(self):
+        if self.action == "list":
+            return UserListSerializer
+        return UserSerializer
+
     @action(detail=False, methods=['get', 'put'], permission_classes=[IsAuthenticated])
     def me(self, request, *args):
         if request.method == 'GET': # get profile
-            return Response(UserSerializer(request.user).data)
+            return Response(UserSerializer(request.user, context={'request': request}).data)
         
         # update profile
         data = request.data

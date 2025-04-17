@@ -69,13 +69,15 @@ class Upload(models.Model):
 
 @receiver(signal=post_save, sender=Upload)
 def upload_save_signal(sender, instance, created, *kargs, **kwargs):
-    from upload.tasks import process_import_hr
+    from upload.tasks import process_import_hr, process_import_timekeeping
     if created: # new
         instance.status = 3
         instance.save()
         try:
             if instance.upload_type == 1:
                 process_import_hr.delay(instance.id)
+            elif instance.upload_type == 5:
+                process_import_timekeeping.delay(instance.id)
         except Exception as e:
             print('Upload Exception', e)
             instance.status = 1
