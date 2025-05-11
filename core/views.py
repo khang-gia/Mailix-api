@@ -1,11 +1,11 @@
 from django.shortcuts import render
-from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR
+from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR, Title
 # Create your views here.
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import UserSerializer, ProfileSerializer, LoginSerializer, SystemNotificationSerializer, FeedbackSerializer, HappeningEventSerializer, HotEventSerializer,\
-  CredentialsSerializer, ProfileHRListSerializer, ProfileHRDetailSerializer, ProfileHRSerializer, UserListSerializer
+  CredentialsSerializer, ProfileHRListSerializer, ProfileHRDetailSerializer, ProfileHRSerializer, UserListSerializer, TitleSerializer, TitleListSerializer
 from django_filters.rest_framework import FilterSet
 import django_filters
 from django.db.models import Q
@@ -198,13 +198,13 @@ class HotEventViewSet(viewsets.ReadOnlyModelViewSet):
 class ProfileHRFilter(FilterSet):
   class Meta:
     model = ProfileHR
-    fields = ['full_name',]
+    fields = ['full_name','employee_code']
 
 class ProfileHRViewSet(viewsets.ModelViewSet):
   queryset = ProfileHR.objects.all()
   serializer_class = ProfileHRSerializer
-  # filterset_class = ProfileHRFilter
-  # permission_classes = [IsAuthenticated]
+  filterset_class = ProfileHRFilter
+  permission_classes = [IsAuthenticated]
   ordering_fields = ['id']
   ordering = ('-id',)
   
@@ -214,3 +214,51 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
     elif self.action == 'retrieve':
       return ProfileHRDetailSerializer
     return ProfileHRSerializer
+
+  @action(detail=False, methods=['post'])
+  def delete_users(self, request, pk=None):
+    # role = request.user.profile.role
+    # print(role)
+    # if role == 'M':
+    #   return Response(status=status.HTTP_403_FORBIDDEN)
+    profile_ids = request.data['profiles']
+    if not profile_ids:
+      return Response(status=status.HTTP_400_BAD_REQUEST)
+    for profile_id in profile_ids:
+      try:
+        profile = ProfileHR.objects.get(pk=profile_id)
+        profile.delete()
+      except ProfileHR.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+      except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(status=status.HTTP_200_OK)
+
+  @action(detail=False, methods=['post'])
+  def deactivate_profile(self, request, pk=None):
+    profile_ids = request.data['profiles']
+    if not profile_ids:
+      return Response(status=status.HTTP_400_BAD_REQUEST)
+    for profile_id in profile_ids:
+      try:
+        profile = ProfileHR.objects.get(pk=profile_id)
+        profile.status = 'Inactive'
+        profile.save()
+      except ProfileHR.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+      except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(status=status.HTTP_200_OK)
+
+
+class TitleViewSet(viewsets.ModelViewSet):
+  queryset = Title.objects.all()
+  serializer_class = TitleSerializer
+  ordering_fields = ['id']
+  ordering = ('-id',)
+  
+  def get_serializer_class(self):
+    print('self.action', self.action)
+    if self.action == 'list':
+      return TitleListSerializer
+    return TitleSerializer

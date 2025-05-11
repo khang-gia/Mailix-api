@@ -11,5 +11,6 @@ router.register(r'happening_events', views.HappeningEventViewSet)
 router.register(r'feedbacks', views.FeedbackViewSet)
 router.register(r'hot_events', views.HotEventViewSet)
 router.register(r'profile_hrs', views.ProfileHRViewSet)
+router.register(r'titles', views.TitleViewSet)
 urlpatterns = router.urls + [
 ]

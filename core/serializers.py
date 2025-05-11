@@ -31,7 +31,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_avatar(self, obj):
       request = self.context.get('request')
-      if obj.profile_hr and obj.profile_hr.avatar:
+      if hasattr(obj, 'profile_hr') and obj.profile_hr and obj.profile_hr.avatar:
         avatar_url = obj.profile_hr.avatar.url
         if request is not None:
           return request.build_absolute_uri(avatar_url)
@@ -128,7 +128,10 @@ class ProfileHRListSerializer(serializers.ModelSerializer):
       fields = '__all__'
   
 class ProfileHRDetailSerializer(serializers.ModelSerializer):
-
+    department = DepartmentListSerializer(read_only=True)
+    title_name = serializers.CharField(source='title.name', read_only=True)
+    type_of_labor_name = serializers.CharField(source='get_type_of_labor_display', read_only=True)
+    direct_manager = UserListSerializer(read_only=True)
     class Meta:
       model = ProfileHR
       fields = '__all__'
@@ -138,3 +141,14 @@ class ProfileHRSerializer(serializers.ModelSerializer):
     class Meta:
       model = ProfileHR
       fields = '__all__'
+
+class TitleSerializer(serializers.ModelSerializer):
+  class Meta:
+    model = Title
+    fields = '__all__'
+
+class TitleListSerializer(serializers.ModelSerializer):
+  class Meta:
+    model = Title
+    fields = '__all__'
+  

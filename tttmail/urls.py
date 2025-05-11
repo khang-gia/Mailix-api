@@ -55,6 +55,7 @@ urlpatterns = [
         
         path('core/', include("core.urls")),
         path('consult/', include("consult.urls")),
+        path('system/', include("system.urls")),
         # path('fa/', include('fa.urls')),
         # path('analyzer/', include("analyzer.urls")),
         # path('download/', include("download.urls")),

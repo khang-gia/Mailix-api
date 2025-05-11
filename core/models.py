@@ -98,10 +98,10 @@ EDUCATION_LEVEL_CHOICES = (
   (12, "12/12"),
 )
 TYPE_OF_LABOR_CHOICES = (
-  (0, "Full-time"),
-  (1, "Part-time"),
-  (2, "Temporary"),
-  (3, "Internship"),
+  ('Full-time', "Full-time"),
+  ('Part-time', "Part-time"),
+  ('Temporary', "Temporary"),
+  ('Internship', "Internship"),
 )
 TYPE_PASSPORT_CHOICES = (
   (0, "Ordinary"),
@@ -233,7 +233,13 @@ class CommunistPartyMember(models.Model):
 
   def __str__(self):
     return "Communist Party Member <{}> {}".format(self.user, self.card_no)
-
+PROFILE_STATUSES= (
+  ('Active', 'Active'),
+  ('Inactive', 'Inactive'),
+  ('Pending', 'Pending'),
+  ('Locked', 'Locked'),
+  ('Deactive', 'Deactive'),
+)
 class ProfileHR(BaseCreateUpdateModel):
     full_name = models.CharField("Full Name", max_length=200, db_index=True)
     user = models.OneToOneField("auth.User", on_delete=models.SET_NULL, related_name='profile_hr', db_index=True, null=True, blank=True)
@@ -250,6 +256,7 @@ class ProfileHR(BaseCreateUpdateModel):
     phone = models.CharField("Phone", max_length=20, null=True, blank=True)
     phone_other = models.CharField("Mobile", max_length=20, null=True, blank=True)
     title = models.ForeignKey('core.Title', on_delete=models.SET_NULL, null=True, blank=True)
+    position = models.ForeignKey('core.Position', on_delete=models.SET_NULL, null=True, blank=True)
     role = models.CharField('Role', max_length=5, choices=ROLE_CHOICES, default='U')
     religion = models.CharField('Religion',max_length=20, null=True, blank=True)
     ethnicity = models.CharField('Ethnicity', max_length=20, null=True, blank=True)
@@ -265,7 +272,7 @@ class ProfileHR(BaseCreateUpdateModel):
     major = models.CharField('Major', max_length=200, null=True, blank=True)
     highest_qualification = models.CharField('Highest Professional Qualification', max_length=200, null=True, blank=True)
     direct_manager = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='manage_users')
-    type_of_labor = models.IntegerField('Type of Labor', choices=TYPE_OF_LABOR_CHOICES, null=True, blank=True, default=0)
+    type_of_labor = models.CharField('Type of Labor', choices=TYPE_OF_LABOR_CHOICES, null=True, blank=True, default='Full-time', max_length=20)
 
     #Passport Info
     id_number = models.CharField('ID No/Passport', max_length=20, null=True, blank=True)
@@ -286,7 +293,7 @@ class ProfileHR(BaseCreateUpdateModel):
     permanent_address = models.CharField('Permanent Address', max_length=200, null=True, blank=True)
     current_address = models.CharField('Current Address', max_length=200, null=True, blank=True)
     public_name = models.CharField('Bút danh', max_length=50, null=True, blank=True)
-
+    status = models.CharField('Status', choices=PROFILE_STATUSES, default='Active', max_length=20, null=True, blank=True)
     history = HistoricalRecords()
 
     def __str__(self):
