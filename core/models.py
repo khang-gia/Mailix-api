@@ -358,6 +358,8 @@ class Profile(BaseCreateUpdateModel):
   is_adjus_permission = models.BooleanField('Is Adjust Permission',default=False, db_index=True)
   status = models.IntegerField('Status', choices=USER_STATUSES, default=0, null=True, blank=True, db_index=True)
   active_date = models.DateField('Active Date', null=True, blank=True, db_index=True)
+  email_verified = models.BooleanField(default=False)
+  phone_verified = models.BooleanField(default=False)
 
   def __str__(self):
       return 'UserProfile-{}'.format(self.user)

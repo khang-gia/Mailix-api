@@ -5,7 +5,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import UserSerializer, ProfileSerializer, LoginSerializer, SystemNotificationSerializer, FeedbackSerializer, HappeningEventSerializer, HotEventSerializer,\
-  CredentialsSerializer, ProfileHRListSerializer, ProfileHRDetailSerializer, ProfileHRSerializer, UserListSerializer, TitleSerializer, TitleListSerializer
+  CredentialsSerializer, ProfileHRListSerializer, ProfileHRDetailSerializer, ProfileHRSerializer, UserListSerializer, TitleSerializer, TitleListSerializer, UsernameSerializer, \
+    OTPSerializer
 from django_filters.rest_framework import FilterSet
 import django_filters
 from django.db.models import Q
@@ -16,6 +17,8 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import action
 
+from core.utils_feature import otp
+from core.utils_feature.mail import send_otp, send_forget_password_otp
 def update_profile(request):
     data = request.data
     user_serializer = UserSerializer(request.user, data = data)
@@ -45,12 +48,66 @@ def register(request, *args):
   # send_otp(user.email, code)
   return Response(user_serializer.data, status=status.HTTP_201_CREATED)
 
+@api_view(['POST'])
+@permission_classes([])
+def generate_otp(request, *args):
+  username = UsernameSerializer(data=request.data)
+  if not username.is_valid():
+    return Response(username.errors, status=status.HTTP_400_BAD_REQUEST)
+  
+  user = User.objects.filter(username=username.data['username']).first()
+  if not user:
+    return Response({'username': ['Email không tồn tại.']}, status=status.HTTP_400_BAD_REQUEST)
+  user_serializer = UserSerializer(user)
+
+  code = otp.generate(user.email)
+  view = request.data.get('view', 'registration')
+  if view == 'registration':
+    send_otp(user.email, code)
+  elif view == 'resetpassword':
+    send_forget_password_otp(user.email, code)
+  return Response(user_serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([])
+def verify_otp(request, *args):
+  username = request.data.get('username')
+  user = User.objects.filter(username=username).first()
+  if not user:
+    return Response({'username': ['User does not exist.']}, status=status.HTTP_400_BAD_REQUEST)
+
+  request.data['email'] = user.email
+  code = OTPSerializer(data=request.data)
+  if not code.is_valid():
+    return Response(code.errors, status=status.HTTP_400_BAD_REQUEST)
+  if not otp.verify(code.data['code'], code.data['email']):
+    return Response({'code': ['Mã OTP không đúng hoặc đã hết hạn.']}, status=status.HTTP_400_BAD_REQUEST)
+  user = User.objects.filter(username=code.data['email']).first()
+  # user.profile.email_verified = True
+  # user.profile.save()
+  user_serializer = UserSerializer(user)
+  return Response(user_serializer.data, status=status.HTTP_200_OK)
+
 @api_view(['GET', 'PUT'])
 def profile_api(request):
   if request.method == 'GET':
     return Response(UserSerializer(request.user).data)
   
   return update_profile(request)
+
+@api_view(['POST'])
+@permission_classes([])
+def pre_login(request, *args):
+  credential = LoginSerializer(data=request.data)
+  if not credential.is_valid():
+    return Response(credential.errors, status=status.HTTP_400_BAD_REQUEST)
+  user = authenticate(**credential.data)
+  if not user:
+    return Response({'username': ['Email hoặc mật khẩu không đúng.']}, status=status.HTTP_400_BAD_REQUEST)
+  user_serializer = UserSerializer(user)
+  code = otp.generate(user.email)
+  send_otp(user.email, code)
+  return Response(user_serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([])
@@ -62,9 +119,6 @@ def login(request, *args):
   if not user:
     return Response({'username': ['Email hoặc mật khẩu không đúng.']}, status=status.HTTP_400_BAD_REQUEST)
   user_serializer = UserSerializer(user)
-#   if not user.profile.email_verified:
-#     code = otp.generate(user.email)
-#     send_otp(user.email, code)
   refresh = RefreshToken.for_user(user)
   return Response({'access': str(refresh.access_token), 'refresh': str(refresh), 'user': user_serializer.data}, status=status.HTTP_200_OK)
 

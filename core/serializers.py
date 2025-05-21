@@ -16,6 +16,13 @@ class LoginSerializer(serializers.Serializer):
     data['email'] = data['username']
     return data
 
+class OTPSerializer(serializers.Serializer):
+  code = serializers.CharField(max_length=6, required=True)
+  email = serializers.EmailField(max_length=100, required=True)
+
+class UsernameSerializer(serializers.Serializer):
+  username = serializers.EmailField(max_length=100, required=True)
+
 class UserSerializer(serializers.ModelSerializer):
     # profile = ProfileSerializer(required=False)
     email = serializers.CharField(required=True)

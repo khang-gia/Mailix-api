@@ -20,9 +20,8 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from core.views import login, register
+from core.views import login, register, pre_login, generate_otp, verify_otp
 # from core.views import login, register, logout, generate_otp, verify_otp, GoogleLogin, reset_password
-
 from django.conf.urls.static import static
 from django.conf import settings
 
@@ -40,15 +39,16 @@ urlpatterns = [
             # path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
             # path('logout/', logout, name='logout'),
             path('login/', login, name='login'),
+            path('pre_login/', pre_login, name='pre_login'),
             path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
             # path('verify/', TokenVerifyView.as_view(), name='token_verify'),
             path('register/', register, name='register'),
             # path('registration/', include('dj_rest_auth.registration.urls')),
             # path('google/', GoogleLogin.as_view(), name='google_login'),
-            # path('otp/', include([
-            #     path('generate/', generate_otp, name='generate_otp'),
-            #     path('verify/', verify_otp, name='verify_otp'),
-            # ])),
+            path('otp/', include([
+                path('generate/', generate_otp, name='generate_otp'),
+                path('verify/', verify_otp, name='verify_otp'),
+            ])),
             # path('reset_password/', reset_password, name='reset_password'),
             # path('', include('dj_rest_auth.urls')),
         ])),

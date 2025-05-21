@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from .models import *
-from core.utils import get_user_name
 
 class TimeRecordSerializer(serializers.ModelSerializer):
   status_name = serializers.CharField(source='get_status_display', read_only=True)
