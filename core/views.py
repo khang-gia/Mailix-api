@@ -34,6 +34,24 @@ def update_profile(request):
             print(profile_serializer.errors)
         
     return Response(user_serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([])
+def reset_password(request, *args):
+  new_password = request.data.get('password', None)
+  if not new_password:
+    return Response({'password': ['Mật khẩu không được để trống.']}, status=status.HTTP_400_BAD_REQUEST)
+  otp_serializer = OTPSerializer(data=request.data)
+  if not otp_serializer.is_valid():
+    return Response(otp_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+  if not otp.verify(otp_serializer.data['code'], otp_serializer.data['email']):
+    return Response({'code': ['Mã OTP không đúng hoặc đã hết hạn.']}, status=status.HTTP_400_BAD_REQUEST)
+  user = User.objects.filter(username=request.data['username']).first()
+  user.set_password(new_password)
+  user.save()
+  user_serializer = UserSerializer(user)
+  return Response(user_serializer.data, status=status.HTTP_200_OK)
+
 @api_view(['POST'])
 @permission_classes([])
 def register(request, *args):
@@ -67,6 +85,21 @@ def generate_otp(request, *args):
   elif view == 'resetpassword':
     send_forget_password_otp(user.email, code)
   return Response(user_serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([])
+def generate_otp_with_email(request, *args):
+  email = request.data.get('email')
+  if not email:
+    return Response({'email': ['Thiếu email.']}, status=status.HTTP_400_BAD_REQUEST)
+  user = User.objects.filter(email=email).first()
+  if not user:
+    return Response({'email': ['Email không tồn tại hoặc chưa được đăng ký.']}, status=status.HTTP_400_BAD_REQUEST)
+  user_serializer = UserSerializer(user)
+  code = otp.generate(email)
+  send_forget_password_otp(email, code)
+  return Response(user_serializer.data, status=status.HTTP_200_OK)
+
 
 @api_view(['POST'])
 @permission_classes([])

@@ -23,7 +23,7 @@ def send_forget_password_otp(to_email, otp):
     send_mail_in_background.delay(
         to_emails = [to_email],
         template_url = 'mails/forgot_password.html', 
-        subject = '[SIEUCOPHIEU.VN] Quên mật khẩu',
+        subject = '[MAILIX.VN] Quên mật khẩu',
         context = {
             'otp': otp,
             'email': to_email
@@ -34,7 +34,7 @@ def send_error_500_email(error_message=None, error_url=None, error_detail=None):
     logger.error('send_error_500_email: {}'.format(error_message))
     send_to_admins.delay(
         template_url = 'mails/500_error.html',
-        subject = '[SIEUCOPHIEU.VN] Báo cáo lỗi hệ thống',
+        subject = '[MAILIX.VN] Báo cáo lỗi hệ thống',
         context = {
             'error_message': error_message,
             'error_url': error_url,

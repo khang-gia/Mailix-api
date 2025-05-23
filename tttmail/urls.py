@@ -1,4 +1,4 @@
-"""SIEUCOPHIEU URL Configuration
+"""MAILIX URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/3.2/topics/http/urls/
@@ -20,7 +20,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from core.views import login, register, pre_login, generate_otp, verify_otp
+from core.views import login, register, pre_login, generate_otp, verify_otp, generate_otp_with_email, reset_password
 # from core.views import login, register, logout, generate_otp, verify_otp, GoogleLogin, reset_password
 from django.conf.urls.static import static
 from django.conf import settings
@@ -47,9 +47,10 @@ urlpatterns = [
             # path('google/', GoogleLogin.as_view(), name='google_login'),
             path('otp/', include([
                 path('generate/', generate_otp, name='generate_otp'),
+                path('generate_email/', generate_otp_with_email, name='generate_otp_with_email'),
                 path('verify/', verify_otp, name='verify_otp'),
             ])),
-            # path('reset_password/', reset_password, name='reset_password'),
+            path('reset_password/', reset_password, name='reset_password'),
             # path('', include('dj_rest_auth.urls')),
         ])),
         
