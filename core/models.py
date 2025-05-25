@@ -13,6 +13,13 @@ ROLE_CHOICES = (
   ('A', 'Admin'),
   ('RA', 'Readonly Admin'),
 )
+SYSTEM_ROLE_CHOICES = (
+  ('U', 'User'),
+  ('M', 'Manager'),
+  ('A', 'Admin'),
+  ('RA', 'Readonly Admin'),
+  ('SA', 'System Admin'),
+)
 ETHNICITY_CHOICES = (
   (0, "Kinh"),
   (1, "Tày"),
@@ -360,7 +367,7 @@ class Profile(BaseCreateUpdateModel):
   active_date = models.DateField('Active Date', null=True, blank=True, db_index=True)
   email_verified = models.BooleanField(default=False)
   phone_verified = models.BooleanField(default=False)
-
+  role = models.CharField('Role', max_length=10, choices=SYSTEM_ROLE_CHOICES, default='U', db_index=True)
   def __str__(self):
       return 'UserProfile-{}'.format(self.user)
 
