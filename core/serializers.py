@@ -129,7 +129,8 @@ class CredentialsSerializer(serializers.Serializer):
 
 
 class ProfileHRListSerializer(serializers.ModelSerializer):
-    department_name = serializers.CharField(source='department__name', read_only=True)
+    department_name = serializers.CharField(source='department.name', read_only=True)
+    title_name = serializers.CharField(source='title.name', read_only=True)
     class Meta:
       model = ProfileHR
       fields = '__all__'

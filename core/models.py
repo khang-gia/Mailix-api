@@ -240,12 +240,20 @@ class CommunistPartyMember(models.Model):
 
   def __str__(self):
     return "Communist Party Member <{}> {}".format(self.user, self.card_no)
-PROFILE_STATUSES= (
-  ('Active', 'Active'),
-  ('Inactive', 'Inactive'),
-  ('Pending', 'Pending'),
-  ('Locked', 'Locked'),
-  ('Deactive', 'Deactive'),
+PROFILE_STATUSES = (
+  (0, 'Working'),
+  (1, 'Temporary absent'),
+  (2, 'Resigned'),
+  (3, 'Providing service'),
+  (4, 'Pending for recruitment'),
+)
+
+ACCOUNT_STATUSES = (
+  (0, 'Active'),
+  (1, 'Inactive'),
+  (2, 'Pending'),
+  (3, 'Locked'),
+  (4, 'Deactive'),
 )
 class ProfileHR(BaseCreateUpdateModel):
     full_name = models.CharField("Full Name", max_length=200, db_index=True)
@@ -300,7 +308,8 @@ class ProfileHR(BaseCreateUpdateModel):
     permanent_address = models.CharField('Permanent Address', max_length=200, null=True, blank=True)
     current_address = models.CharField('Current Address', max_length=200, null=True, blank=True)
     public_name = models.CharField('Bút danh', max_length=50, null=True, blank=True)
-    status = models.CharField('Status', choices=PROFILE_STATUSES, default='Active', max_length=20, null=True, blank=True)
+    # status = models.CharField('Status', choices=PROFILE_STATUSES, default='Active', max_length=100, null=True, blank=True)
+    status = models.IntegerField('Status', choices=PROFILE_STATUSES, default=0, null=True, blank=True, db_index=True)
     history = HistoricalRecords()
 
     def __str__(self):

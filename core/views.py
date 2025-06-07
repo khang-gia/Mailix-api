@@ -285,7 +285,7 @@ class HotEventViewSet(viewsets.ReadOnlyModelViewSet):
 class ProfileHRFilter(FilterSet):
   class Meta:
     model = ProfileHR
-    fields = ['full_name','employee_code']
+    fields = ['full_name','employee_code','status']
 
 class ProfileHRViewSet(viewsets.ModelViewSet):
   queryset = ProfileHR.objects.all()
@@ -337,6 +337,22 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(status=status.HTTP_200_OK)
 
+  @action(detail=True , methods=['post'])
+  def create_account(self, request, pk=None):
+    profile = self.get_object()
+    email = request.data.get('email', None)
+    username = request.data.get('username', None)
+    password = request.data.get('password', None)
+    if not username or not email or not password:
+      return Response({'detail': 'Username, email, and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not profile:
+      return Response({'detail': 'Profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+    
+    user = User.objects.create_user(username=username, email=email)
+    user.set_password(password)
+    user.save()
+    
+    return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 class TitleViewSet(viewsets.ModelViewSet):
   queryset = Title.objects.all()
