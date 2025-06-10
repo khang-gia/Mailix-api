@@ -418,4 +418,21 @@ CONTRACT_TYPES = (
 #   level = models.IntegerField('Level', choices=)
 
 
- 
+
+class Customer(BaseCreateUpdateModel):
+    name = models.CharField("Name", max_length=200, db_index=True)
+    email = models.EmailField("Email", null=True, blank=True, db_index=True)
+    phone = models.CharField("Phone", max_length=20, null=True, blank=True, db_index=True)
+    address = models.CharField("Address", max_length=200, null=True, blank=True, db_index=True)
+    dob = models.DateField("Birthday", null=True, blank=True, db_index=True)
+    note = models.TextField("Note", null=True, blank=True)
+    company_name = models.CharField("Company Name", max_length=200, null=True, blank=True, db_index=True)
+    company_address = models.CharField("Company Address", max_length=200, null=True, blank=True, db_index=True)
+    company_phone = models.CharField("Company Phone", max_length=20, null=True, blank=True, db_index=True)
+    company_email = models.EmailField("Company Email", null=True, blank=True, db_index=True)
+    company_tax_code = models.CharField("Company Tax Code", max_length=20, null=True, blank=True, db_index=True)
+    website = models.URLField("Website", null=True, blank=True)
+    history = HistoricalRecords()
+
+    def __str__(self):
+        return self.name

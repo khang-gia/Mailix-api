@@ -339,19 +339,26 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
 
   @action(detail=True , methods=['post'])
   def create_account(self, request, pk=None):
-    profile = self.get_object()
+    profile_hr = self.get_object()
     email = request.data.get('email', None)
     username = request.data.get('username', None)
     password = request.data.get('password', None)
     if not username or not email or not password:
       return Response({'detail': 'Username, email, and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
-    if not profile:
+    if not profile_hr:
       return Response({'detail': 'Profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+    
+    if User.objects.filter(email=email).exists():
+      return Response({'detail': 'Email is already in use by another account.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if User.objects.filter(username=username).exists():
+      return Response({'detail': 'Username is already in use by another account.'}, status=status.HTTP_400_BAD_REQUEST)
     
     user = User.objects.create_user(username=username, email=email)
     user.set_password(password)
     user.save()
-    
+    profile_hr.user = user
+    profile_hr.save()
     return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 class TitleViewSet(viewsets.ModelViewSet):

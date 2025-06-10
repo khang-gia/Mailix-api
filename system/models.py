@@ -5,6 +5,20 @@ from django.contrib.auth.models import User, Group
 from core.mixins.base_model import BaseModel, BaseCreateDeleteModel, BaseCreateUpdateModel
 from simple_history.models import HistoricalRecords
 
+class PackageConfig(BaseCreateUpdateModel):
+  name = models.CharField("Name", max_length=100, db_index=True)
+  code = models.CharField("Code", max_length=50, unique=True, db_index=True)
+  description = models.TextField("Description", null=True, blank=True, db_index=True)
+  price = models.DecimalField("Price", max_digits=10, decimal_places=2, default=0.00, db_index=True)
+  is_active = models.BooleanField("Is Active", default=True)
+  maximum_user = models.IntegerField("Maximum User", default=0)
+  maximum_email = models.IntegerField("Maximum Email", default=0)
+  maximum_customer = models.IntegerField("Maximum Customer", default=0)
+  maximum_contact = models.IntegerField("Maximum Contact", default=0)
+
+  def __str__(self) -> str:
+    return "PackageConfig <{}> {}".format(self.pk, self.name)
+
 
 COMPANY_STATUSES = (
   (0, "Working"),
@@ -22,6 +36,15 @@ class Company(BaseCreateUpdateModel):
     headquarter = models.CharField("Headquarter", max_length=200, null=True, blank=True, db_index=True)
     establishment_date = models.DateField("Establishment Date")
     legal_representative = models.ForeignKey("auth.User",on_delete=models.SET_NULL, null=True, blank=True, related_name='companies', db_index=True)
+    package_config = models.ForeignKey("PackageConfig", on_delete=models.SET_NULL, null=True, blank=True, related_name="companies", db_index=True)
+    is_maximum_user = models.BooleanField("Is Maximum User", default=False, db_index=True)
+    is_maximum_email = models.BooleanField("Is Maximum Email", default=False, db_index=True)
+    is_maximum_customer = models.BooleanField("Is Maximum Customer", default=False, db_index=True)
+    is_maximum_contact = models.BooleanField("Is Maximum Contact", default=False, db_index=True)
+    logo = models.ImageField("Logo", upload_to='company_logos/', null=True, blank=True)
+    description = models.TextField("Description", null=True, blank=True)
+    website = models.URLField("Website", null=True, blank=True, db_index=True)
+    email = models.EmailField("Email", null=True, blank=True, db_index=True)
     history = HistoricalRecords()
 
     def __str__(self) -> str:
