@@ -27,7 +27,8 @@ class UserListSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = User
-        fields = '__all__'
+        exclude = ['password', 'user_permissions', 'is_superuser', 'is_staff']
+
 
     def get_full_name(self, obj):
       return '%s %s' % (obj.first_name, obj.last_name) if obj.first_name else obj.username if not hasattr(obj, 'profile_hr') else obj.profile_hr.full_name
@@ -44,7 +45,6 @@ class ProfileHRDetailSerializer(serializers.ModelSerializer):
   
 
 class UserSerializer(serializers.ModelSerializer):
-    # profile = ProfileSerializer(required=False)
     email = serializers.CharField(required=True)
     first_name = serializers.CharField(required=True)
     display_name = serializers.SerializerMethodField(read_only=True)
@@ -67,6 +67,26 @@ class UserSerializer(serializers.ModelSerializer):
         return avatar_url
       return None
 
+class UserOtherViewSerializer(serializers.ModelSerializer):
+    display_name = serializers.SerializerMethodField(read_only=True)
+    avatar = serializers.SerializerMethodField(read_only=True)
+    profile_hr = ProfileHRDetailSerializer(read_only=True, required=False)
+    class Meta:
+        model = User
+        exclude = ['password', 'user_permissions', 'is_superuser', 'is_staff']
+
+    def get_display_name(self, obj):
+        return '%s %s'%(obj.first_name, obj.last_name) if obj.first_name else obj.username if not hasattr(obj, 'profile_hr') else obj.profile_hr.full_name
+
+    def get_avatar(self, obj):
+      request = self.context.get('request')
+      if hasattr(obj, 'profile_hr') and obj.profile_hr and obj.profile_hr.avatar:
+        avatar_url = obj.profile_hr.avatar.url
+        if request is not None:
+          return request.build_absolute_uri(avatar_url)
+
+        return avatar_url
+      return None 
 
     
 class ProfileSerializer(serializers.ModelSerializer):
@@ -165,3 +185,21 @@ class TitleListSerializer(serializers.ModelSerializer):
     model = Title
     fields = '__all__'
   
+class CustomerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Customer
+        fields = '__all__'
+
+class CustomerListSerializer(serializers.ModelSerializer):
+    customer_source = serializers.CharField(source='get_customer_source_display', read_only=True)
+    customer_group = serializers.CharField(source='get_customer_group_display', read_only=True)
+    type_of_customer = serializers.CharField(source='get_type_of_customer_display', read_only=True) 
+    assigned_to = UserOtherViewSerializer(read_only=True)
+    class Meta:
+        model = Customer
+        fields = '__all__'
+
+class CustomerDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Customer
+        fields = '__all__'

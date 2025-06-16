@@ -1,12 +1,12 @@
 from django.shortcuts import render
-from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR, Title
+from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR, Title, Customer
 # Create your views here.
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import UserSerializer, ProfileSerializer, LoginSerializer, SystemNotificationSerializer, FeedbackSerializer, HappeningEventSerializer, HotEventSerializer,\
   CredentialsSerializer, ProfileHRListSerializer, ProfileHRDetailSerializer, ProfileHRSerializer, UserListSerializer, TitleSerializer, TitleListSerializer, UsernameSerializer, \
-    OTPSerializer
+    OTPSerializer, CustomerSerializer, CustomerListSerializer, CustomerDetailSerializer
 from django_filters.rest_framework import FilterSet
 import django_filters
 from django.db.models import Q
@@ -19,6 +19,8 @@ from rest_framework.decorators import action
 
 from core.utils_feature import otp
 from core.utils_feature.mail import send_otp, send_forget_password_otp
+from rest_framework.views import APIView
+
 def update_profile(request):
     data = request.data
     user_serializer = UserSerializer(request.user, data = data)
@@ -372,3 +374,101 @@ class TitleViewSet(viewsets.ModelViewSet):
     if self.action == 'list':
       return TitleListSerializer
     return TitleSerializer
+
+
+class LoginView(APIView):
+    def post(self, request, *args, **kwargs):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        otp_code = request.data.get('otp_code')
+        remember_device = request.data.get('remember_device', False)
+
+        user = authenticate(username=username, password=password)
+
+        if not user:
+            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # --- Check for a trusted device cookie BEFORE checking OTP ---
+        trusted_device_token = request.COOKIES.get('trusted_device')
+        if trusted_device_token:
+            # Find a matching token for this user
+            for device in user.trusted_devices.all():
+                if check_password(trusted_device_token, device.token):
+                    # Device is trusted, bypass OTP.
+                    # Update last used timestamp
+                    device.save() 
+                    
+                    # Issue auth token and log the user in
+                    auth_token, _ = Token.objects.get_or_create(user=user)
+                    return Response({'token': auth_token.key, 'detail': 'Login successful.'})
+
+        # --- If no trusted device, proceed with OTP check ---
+        if not is_valid_otp(user, otp_code): # Replace with your actual OTP validation logic
+             return Response({'error': 'Invalid OTP'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # --- OTP is valid, now create a trusted device if requested ---
+        if remember_device:
+            # Generate a new secure token for the cookie
+            new_token = secrets.token_hex(32)
+            
+            # Hash the token before saving to the database
+            hashed_token = make_password(new_token)
+            
+            # Create the trusted device record
+            TrustedDevice.objects.create(
+                user=user,
+                token=hashed_token,
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            
+            # Issue auth token
+            auth_token, _ = Token.objects.get_or_create(user=user)
+            
+            # Create response and set the secure cookie
+            response = Response({'token': auth_token.key, 'detail': 'Login and device verification successful.'})
+            response.set_cookie(
+                key='trusted_device',
+                value=new_token,
+                max_age=30 * 24 * 60 * 60,  # 30 days
+                secure=not settings.DEBUG,  # True in production
+                httponly=True,              # Crucial: prevents JS access
+                samesite='Strict'           # Highly recommended
+            )
+            return response
+
+        # --- If not remembering device, just log in normally after OTP ---
+        auth_token, _ = Token.objects.get_or_create(user=user)
+        return Response({'token': auth_token.key, 'detail': 'Login successful.'})
+
+class CustomerFilter(FilterSet):
+  search = django_filters.CharFilter(method='elastic_search')
+  
+  class Meta:
+    model = Customer
+    fields = ['name', 'email', 'phone', 'address', 'company_name']
+
+  def elastic_search(self, queryset, name, value):
+    if not value:
+      return queryset
+    
+    fields = ['name__icontains', 'email__icontains', 'phone__icontains', 'address__icontains', 'company_name__icontains', 'company_tax_code']
+    _q = Q()
+    for field in fields:
+      _q = _q | Q(**{field: value})
+
+    return queryset.filter(_q)
+
+class CustomerViewSet(viewsets.ModelViewSet):
+  queryset = Customer.objects.all()
+  serializer_class = CustomerSerializer
+  filterset_class = CustomerFilter
+  ordering_fields = ['id']
+  ordering = ('-id',)
+
+  def get_serializer_class(self):
+    if self.action == 'list':
+      return CustomerListSerializer
+    elif self.action == 'retrieve':
+      return CustomerDetailSerializer
+    return CustomerSerializer

@@ -418,9 +418,34 @@ CONTRACT_TYPES = (
 #   level = models.IntegerField('Level', choices=)
 
 
-
+CUSTOMER_TYPES = (
+  (0, 'Personal'),
+  (1, 'Organization'),
+)
+CUSTOMER_GROUPS = (
+  (0, 'Loyal Customer'),
+  (1, 'Former Customer'),
+  (2, 'Potential Customer'),
+  (3, 'Casual Customer'),
+  (4, 'Newly acquired lead'),
+  (5, 'Nurturing customer lead'),
+  (6, 'VIP'),
+  (7, 'VVIP')
+)
+CUSTOMER_SOURCES = (
+  (0, 'Facebook'),
+  (1, 'Instagram'),
+  (2, 'Google'),
+  (3, 'Old customer referral'),
+  (4, 'Website'),
+  (5, 'Self-searching'),
+  (6, 'Switchboard'),
+  (7, 'Broker'),
+  (8, 'Sale data')
+)
 class Customer(BaseCreateUpdateModel):
     name = models.CharField("Name", max_length=200, db_index=True)
+    customer_code = models.CharField("Customer Code", max_length=100, null=True, blank=True, db_index=True)
     email = models.EmailField("Email", null=True, blank=True, db_index=True)
     phone = models.CharField("Phone", max_length=20, null=True, blank=True, db_index=True)
     address = models.CharField("Address", max_length=200, null=True, blank=True, db_index=True)
@@ -431,8 +456,48 @@ class Customer(BaseCreateUpdateModel):
     company_phone = models.CharField("Company Phone", max_length=20, null=True, blank=True, db_index=True)
     company_email = models.EmailField("Company Email", null=True, blank=True, db_index=True)
     company_tax_code = models.CharField("Company Tax Code", max_length=20, null=True, blank=True, db_index=True)
+    assigned_to = models.ForeignKey(User,on_delete=models.SET_NULL, related_name='contacts', db_index=True, null=True, blank=True)
+    type_of_customer = models.IntegerField("Type of customer", choices=CUSTOMER_TYPES, default=0, db_index=True)
+    customer_group = models.IntegerField("Customer Group", choices=CUSTOMER_GROUPS, default=0, db_index=True)
+    customer_source = models.IntegerField("Customer Source",choices=CUSTOMER_SOURCES, default=0, db_index=True)
     website = models.URLField("Website", null=True, blank=True)
+    # status = models.IntegerField("Status", choices=CUSTOMER_STATUSES, default=0, null=True, blank=True, db_index=True)
     history = HistoricalRecords()
 
     def __str__(self):
         return self.name
+CONTACT_STATUSES = (
+  (0, 'New'),
+  (1, '1st Contacted'),
+  (2, '2nd Contacted'),
+  (3, 'Consulting'),
+  (4, 'Negotiating'),
+  (5, 'Contracted'),
+  (6, 'Quoted'),
+  (7, 'Old Customer'),
+  (9, 'Others')
+)
+
+# class Contacts(BaseCreateUpdateModel):
+#     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='contacts', db_index=True)
+#     full_name = models.CharField("Full Name", max_length=200, db_index=True)
+#     email = models.EmailField("Email", null=True, blank=True, db_index=True)
+#     phone = models.CharField("Phone", max_length=20, null=True, blank=True, db_index=True)
+#     position = models.CharField("Position", max_length=100, null=True, blank=True, db_index=True)
+#     note = models.TextField("Note", null=True, blank=True)
+#     history = HistoricalRecords()
+
+#     def __str__(self):
+#         return self.full_name
+  
+# class Works(BaseCreateUpdateModel):
+#     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='works', db_index=True)
+#     title = models.CharField("Title", max_length=200, db_index=True)
+#     description = models.TextField("Description", null=True, blank=True)
+#     start_date = models.DateField("Start Date", null=True, blank=True, db_index=True)
+#     end_date = models.DateField("End Date", null=True, blank=True, db_index=True)
+#     status = models.CharField("Status", max_length=50, null=True, blank=True, db_index=True)
+#     history = HistoricalRecords()
+
+#     def __str__(self):
+#         return self.title
