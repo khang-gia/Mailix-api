@@ -194,7 +194,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
     customer_source = serializers.CharField(source='get_customer_source_display', read_only=True)
     customer_group = serializers.CharField(source='get_customer_group_display', read_only=True)
     type_of_customer = serializers.CharField(source='get_type_of_customer_display', read_only=True) 
-    assigned_to = UserOtherViewSerializer(read_only=True)
+    curators = UserOtherViewSerializer(read_only=True, many=True)
     class Meta:
         model = Customer
         fields = '__all__'

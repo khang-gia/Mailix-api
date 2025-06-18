@@ -9,7 +9,7 @@ from .serializers import UserSerializer, ProfileSerializer, LoginSerializer, Sys
     OTPSerializer, CustomerSerializer, CustomerListSerializer, CustomerDetailSerializer
 from django_filters.rest_framework import FilterSet
 import django_filters
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.contrib.auth.models import User
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -443,10 +443,17 @@ class LoginView(APIView):
 
 class CustomerFilter(FilterSet):
   search = django_filters.CharFilter(method='elastic_search')
-  
+  curator = django_filters.CharFilter(method='filter_curator')
+  curator__isnull = django_filters.BooleanFilter(method='filter_curator_isnull')
+
+  def filter_curator_isnull(self, queryset, name, value):
+    if value:
+      return queryset.filter(curators__isnull=True)
+    return queryset.exclude(curators__isnull=True)
+
   class Meta:
     model = Customer
-    fields = ['name', 'email', 'phone', 'address', 'company_name']
+    fields = ['name', 'email', 'phone', 'address', 'company_name', 'type_of_customer', 'curators']
 
   def elastic_search(self, queryset, name, value):
     if not value:
@@ -458,6 +465,9 @@ class CustomerFilter(FilterSet):
       _q = _q | Q(**{field: value})
 
     return queryset.filter(_q)
+
+  def filter_curator(self, queryset, name, value):
+    return queryset.filter(curators__id=value)  # Filter by a specific curator ID
 
 class CustomerViewSet(viewsets.ModelViewSet):
   queryset = Customer.objects.all()

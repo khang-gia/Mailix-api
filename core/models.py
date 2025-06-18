@@ -456,7 +456,7 @@ class Customer(BaseCreateUpdateModel):
     company_phone = models.CharField("Company Phone", max_length=20, null=True, blank=True, db_index=True)
     company_email = models.EmailField("Company Email", null=True, blank=True, db_index=True)
     company_tax_code = models.CharField("Company Tax Code", max_length=20, null=True, blank=True, db_index=True)
-    assigned_to = models.ForeignKey(User,on_delete=models.SET_NULL, related_name='contacts', db_index=True, null=True, blank=True)
+    curators = models.ManyToManyField(User, related_name='contacts',null=True, blank=True, db_index=True)
     type_of_customer = models.IntegerField("Type of customer", choices=CUSTOMER_TYPES, default=0, db_index=True)
     customer_group = models.IntegerField("Customer Group", choices=CUSTOMER_GROUPS, default=0, db_index=True)
     customer_source = models.IntegerField("Customer Source",choices=CUSTOMER_SOURCES, default=0, db_index=True)
@@ -485,6 +485,8 @@ CONTACT_STATUSES = (
 #     phone = models.CharField("Phone", max_length=20, null=True, blank=True, db_index=True)
 #     position = models.CharField("Position", max_length=100, null=True, blank=True, db_index=True)
 #     note = models.TextField("Note", null=True, blank=True)
+#     status = models.IntegerField("Status", choices=CONTACT_STATUSES, default=0, null=True, blank=True, db_index=True)
+
 #     history = HistoricalRecords()
 
 #     def __str__(self):
