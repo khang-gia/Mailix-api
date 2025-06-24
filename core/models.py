@@ -419,47 +419,82 @@ CONTRACT_TYPES = (
 
 
 CUSTOMER_TYPES = (
-  (0, 'Personal'),
-  (1, 'Organization'),
+  (1, 'Personal'),
+  (2, 'Organization'),
 )
 CUSTOMER_GROUPS = (
-  (0, 'Loyal Customer'),
-  (1, 'Former Customer'),
-  (2, 'Potential Customer'),
-  (3, 'Casual Customer'),
-  (4, 'Newly acquired lead'),
-  (5, 'Nurturing customer lead'),
-  (6, 'VIP'),
-  (7, 'VVIP')
+  (1, 'Loyal Customer'),
+  (2, 'Former Customer'),
+  (3, 'Potential Customer'),
+  (4, 'Casual Customer'),
+  (5, 'Newly acquired lead'),
+  (6, 'Nurturing customer lead'),
+  (7, 'VIP'),
+  (8, 'VVIP')
 )
 CUSTOMER_SOURCES = (
-  (0, 'Facebook'),
-  (1, 'Instagram'),
-  (2, 'Google'),
-  (3, 'Old customer referral'),
-  (4, 'Website'),
-  (5, 'Self-searching'),
-  (6, 'Switchboard'),
-  (7, 'Broker'),
-  (8, 'Sale data')
+  (1, 'Facebook'),
+  (2, 'Instagram'),
+  (3, 'Google'),
+  (4, 'Old customer referral'),
+  (5, 'Website'),
+  (6, 'Self-searching'),
+  (7, 'Switchboard'),
+  (8, 'Broker'),
+  (9, 'Sale data')
 )
+COMPANY_TYPES = (
+  (1, 'Limited Liability Company'),
+  (2, 'Joint Stock Company'),
+  (3, 'Partnership'),
+  (4, 'Sole Proprietorship'),
+  (5, 'State-owned Enterprise'),
+  (6, 'Foreign Enterprise'),
+  (7, 'Cooperative'),
+  (8, 'Non-profit Organization'),
+)
+LINE_OF_BUSINESS_CHOICES = (
+  (1, 'Retail'),
+  (2, 'Wholesale'),
+  (3, 'Manufacturing'),
+  (4, 'Service'),
+  (5, 'Technology'),
+  (6, 'Healthcare'),
+  (7, 'Education'),
+  (8, 'Finance'),
+  (9, 'Real Estate'),
+  (10, 'Transportation'),
+  (11, 'Construction'),
+  (12, 'Hospitality'),
+  (13, 'Entertainment'),
+  (14, 'Agriculture'),
+  (15, 'Other'),
+)
+
 class Customer(BaseCreateUpdateModel):
     name = models.CharField("Name", max_length=200, db_index=True)
-    customer_code = models.CharField("Customer Code", max_length=100, null=True, blank=True, db_index=True)
+    customer_code = models.CharField("Customer Code", max_length=100, unique=True, null=True, blank=True, db_index=True)
     email = models.EmailField("Email", null=True, blank=True, db_index=True)
     phone = models.CharField("Phone", max_length=20, null=True, blank=True, db_index=True)
     address = models.CharField("Address", max_length=200, null=True, blank=True, db_index=True)
+    gender = models.CharField("Gender", max_length=10, null=True, blank=True)
     dob = models.DateField("Birthday", null=True, blank=True, db_index=True)
     note = models.TextField("Note", null=True, blank=True)
+    tax_code = models.CharField("Tax Code", max_length=20, null=True, blank=True, db_index=True)
+    id_number = models.CharField("ID Number", max_length=20, null=True, blank=True, db_index=True)
     company_name = models.CharField("Company Name", max_length=200, null=True, blank=True, db_index=True)
     company_address = models.CharField("Company Address", max_length=200, null=True, blank=True, db_index=True)
     company_phone = models.CharField("Company Phone", max_length=20, null=True, blank=True, db_index=True)
     company_email = models.EmailField("Company Email", null=True, blank=True, db_index=True)
     company_tax_code = models.CharField("Company Tax Code", max_length=20, null=True, blank=True, db_index=True)
+    company_type = models.IntegerField("Company Type", choices=COMPANY_TYPES, default=1, null=True, blank=True, db_index=True)
+    line_of_business = models.IntegerField("Line of Business", choices=LINE_OF_BUSINESS_CHOICES, default=1, null=True, blank=True, db_index=True)
     curators = models.ManyToManyField(User, related_name='contacts',null=True, blank=True, db_index=True)
-    type_of_customer = models.IntegerField("Type of customer", choices=CUSTOMER_TYPES, default=0, db_index=True)
-    customer_group = models.IntegerField("Customer Group", choices=CUSTOMER_GROUPS, default=0, db_index=True)
-    customer_source = models.IntegerField("Customer Source",choices=CUSTOMER_SOURCES, default=0, db_index=True)
+    type_of_customer = models.IntegerField("Type of customer", choices=CUSTOMER_TYPES, default=1, db_index=True)
+    customer_group = models.IntegerField("Customer Group", choices=CUSTOMER_GROUPS, default=1, db_index=True)
+    customer_source = models.IntegerField("Customer Source",choices=CUSTOMER_SOURCES, default=1, db_index=True)
+    note = models.TextField("Note", null=True, blank=True)
+    customer_avatar = models.ImageField("Customer Avatar", upload_to='customer_avatars/', null=True, blank=True)
     website = models.URLField("Website", null=True, blank=True)
     # status = models.IntegerField("Status", choices=CUSTOMER_STATUSES, default=0, null=True, blank=True, db_index=True)
     history = HistoricalRecords()

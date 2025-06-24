@@ -168,7 +168,7 @@ class UserFilter(FilterSet):
     def elastic_search(self, queryset, name, value):
         if not value:
             return queryset
-        fields = ['username__icontains', 'first_name__icontains', 'last_name__icontains', 'profile__employee_code__icontains']
+        fields = ['username__icontains', 'first_name__icontains', 'last_name__icontains', 'profile_hr__full_name__icontains', 'email__icontains']
         _q = Q()
         for field in fields:
          _q = _q | Q(**{field: value})
