@@ -88,7 +88,7 @@ class UserOtherViewSerializer(serializers.ModelSerializer):
         return avatar_url
       return None 
 
-    
+
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
@@ -190,6 +190,38 @@ class CustomerSerializer(serializers.ModelSerializer):
         model = Customer
         fields = '__all__'
 
+    def create(self, validated_data):
+      curators = validated_data.pop('curators', [])
+      type_of_customer = validated_data.pop('type_of_customer', None)
+      if type_of_customer == 1:
+        company_fields = [
+        'company_name', 'company_code', 'company_address', 'company_phone',
+        'company_email', 'company_tax_code', 'company_type', 'line_of_business'
+        ]
+        for field in company_fields:
+          validated_data[field] = None
+        
+      customer = Customer.objects.create(**validated_data)
+      customer.curators.set(curators)
+      return customer
+
+    def update(self, instance, validated_data):
+      curators = validated_data.pop('curators', None)
+      type_of_customer = validated_data.pop('type_of_customer', None)
+      if type_of_customer == 1:
+        company_fields = [
+        'company_name', 'company_code', 'company_address', 'company_phone',
+        'company_email', 'company_tax_code', 'company_type', 'line_of_business'
+        ]
+        for field in company_fields:
+          validated_data[field] = None
+      for attr, value in validated_data.items():
+        setattr(instance, attr, value)
+      if curators is not None:
+        instance.curators.set(curators)
+      instance.save()
+      return instance
+
 class CustomerListSerializer(serializers.ModelSerializer):
     customer_source = serializers.CharField(source='get_customer_source_display', read_only=True)
     customer_group = serializers.CharField(source='get_customer_group_display', read_only=True)
@@ -200,6 +232,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class CustomerDetailSerializer(serializers.ModelSerializer):
+    curators = UserListSerializer(read_only=True, many=True)
     class Meta:
         model = Customer
         fields = '__all__'

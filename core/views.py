@@ -445,7 +445,7 @@ class CustomerFilter(FilterSet):
   search = django_filters.CharFilter(method='elastic_search')
   curator = django_filters.CharFilter(method='filter_curator')
   curator__isnull = django_filters.BooleanFilter(method='filter_curator_isnull')
-
+  
   def filter_curator_isnull(self, queryset, name, value):
     if value:
       return queryset.filter(curators__isnull=True)
@@ -453,7 +453,7 @@ class CustomerFilter(FilterSet):
 
   class Meta:
     model = Customer
-    fields = ['name', 'email', 'phone', 'address', 'company_name', 'type_of_customer', 'curators']
+    fields = ['name', 'email', 'phone', 'address', 'company_name', 'type_of_customer', 'curators', 'customer_code']
 
   def elastic_search(self, queryset, name, value):
     if not value:
