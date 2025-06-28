@@ -12,7 +12,6 @@ from .serializers import NotificationSerializer, ArticleDetailSerializer, Articl
     
 from .models import Notification, Article, ArticleType
 
-# from invest.models import UserStockList
 
 from django.db.models import Q, F
 
