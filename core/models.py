@@ -470,6 +470,44 @@ LINE_OF_BUSINESS_CHOICES = (
   (14, 'Agriculture'),
   (15, 'Other'),
 )
+CUSTOMER_STATUSES = (
+  (1, 'New'),
+  (2, '1st Contacted'),
+  (3, '2nd Contacted'),
+  (4, 'Consulting'),
+  (5, 'Negotiating'),
+  (6, 'Contracted'),
+  (7, 'Quoted'),
+  (8, 'Old Customer'),
+  (10, 'Others')
+)
+CUSTOMER_STAGES = (
+  (1, 'CONTACT'),
+  (2, 'CUSTOMER'),
+  (3, 'DEAL'),
+  (4, 'INVOICE'),
+  (5, 'PAYMENT'),
+  (6, 'DELIVERY'),
+  (7, 'COMPLETED'),
+)
+TITLES = (
+  (1, 'Ông'),
+  (2, 'Bà'),
+  (3, 'Cô'),
+  (4, 'Anh'),
+  (5, 'Chị'),
+  (6, 'Tiến sĩ'),
+  (7, 'Giáo sư'),
+  (8, 'Mr.'),
+  (9, 'Ms.'),
+  (10, 'Mrs.'),
+  (11, 'Dr.'),
+  (12, 'Prof.'),
+  (13, 'Sir'),
+  (14, 'Madam'),
+  (15, 'Lord'),
+  (16, 'Lady'),
+)
 
 class Customer(BaseCreateUpdateModel):
     name = models.CharField("Name", max_length=200, db_index=True)
@@ -489,32 +527,60 @@ class Customer(BaseCreateUpdateModel):
     company_tax_code = models.CharField("Company Tax Code", max_length=20, null=True, blank=True, db_index=True)
     company_type = models.IntegerField("Company Type", choices=COMPANY_TYPES, default=1, null=True, blank=True, db_index=True)
     line_of_business = models.IntegerField("Line of Business", choices=LINE_OF_BUSINESS_CHOICES, default=1, null=True, blank=True, db_index=True)
-    curators = models.ManyToManyField(User, related_name='contacts',null=True, blank=True, db_index=True)
+    curators = models.ManyToManyField(User, related_name='contacts', null=True, blank=True, db_index=True)
     type_of_customer = models.IntegerField("Type of customer", choices=CUSTOMER_TYPES, default=1, db_index=True)
     customer_group = models.IntegerField("Customer Group", choices=CUSTOMER_GROUPS, default=1, db_index=True)
-    customer_source = models.IntegerField("Customer Source",choices=CUSTOMER_SOURCES, default=1, db_index=True)
+    customer_source = models.IntegerField("Customer Source", choices=CUSTOMER_SOURCES, default=1, db_index=True)
     note = models.TextField("Note", null=True, blank=True)
     customer_avatar = models.ImageField("Customer Avatar", upload_to='customer_avatars/', null=True, blank=True)
     website = models.URLField("Website", null=True, blank=True)
-    # status = models.IntegerField("Status", choices=CUSTOMER_STATUSES, default=0, null=True, blank=True, db_index=True)
+    status = models.IntegerField("Status", choices=CUSTOMER_STATUSES, default=1, null=True, blank=True, db_index=True)
+    stage = models.IntegerField("Stage", choices=CUSTOMER_STAGES, default=1, null=True, blank=True, db_index=True)
+    title = models.IntegerField("Title", choices=TITLES, null=True, blank=True, db_index=True)
     history = HistoricalRecords()
 
     def __str__(self):
         return self.name
-CONTACT_STATUSES = (
-  (0, 'New'),
-  (1, '1st Contacted'),
-  (2, '2nd Contacted'),
-  (3, 'Consulting'),
-  (4, 'Negotiating'),
-  (5, 'Contracted'),
-  (6, 'Quoted'),
-  (7, 'Old Customer'),
-  (9, 'Others')
+
+CONTACT_ADDITIONAL_INFO_TYPES = (
+  (1, 'Email'),
+  (2, 'Phone'),
+  (3, 'Address'),
+  (4, 'Website'),
+  (5, 'Facebook'),
+  (6, 'LinkedIn'),
+  (7, 'Twitter'),
+  (8, 'Instagram'),
+  (9, 'Skype'),
+  (10, 'WhatsApp'),
+  (11, 'Telegram'),
+  (12, 'Viber'),
+  (13, 'Zalo'),
+  (14, 'WeChat'),
+  (15, 'Other'),
 )
+class ContactAddtionalInfo(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='additional_infos', db_index=True)
+    type_of_contact = models.IntegerField("Type of Contact", choices=CONTACT_ADDITIONAL_INFO_TYPES, default=1, db_index=True)
+    description = models.TextField("Value", null=True, blank=True)
+
+    def __str__(self):
+        return "{}: {}".format(self.get_type_of_contact_display(), self.description)
+
+# CONTACT_STATUSES = (
+#   (0, 'New'),
+#   (1, '1st Contacted'),
+#   (2, '2nd Contacted'),
+#   (3, 'Consulting'),
+#   (4, 'Negotiating'),
+#   (5, 'Contracted'),
+#   (6, 'Quoted'),
+#   (7, 'Old Customer'),
+#   (9, 'Others')
+# )
 
 # class Contacts(BaseCreateUpdateModel):
-#     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='contacts', db_index=True)
+#     # customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='contacts', db_index=True)
 #     full_name = models.CharField("Full Name", max_length=200, db_index=True)
 #     email = models.EmailField("Email", null=True, blank=True, db_index=True)
 #     phone = models.CharField("Phone", max_length=20, null=True, blank=True, db_index=True)

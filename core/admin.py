@@ -12,4 +12,13 @@ admin.site.register(ProfessionalQualification)
 admin.site.register(CommunistPartyMember)
 admin.site.register(Profile)
 admin.site.register(ProfileHR)
-admin.site.register(Customer)
+
+@admin.register(Customer)
+class CustomerAdmin(admin.ModelAdmin):
+  list_display = ('name', 'customer_code','status','stage')
+
+
+@admin.register(ContactAddtionalInfo)
+class ContactAddtionalInfoAdmin(admin.ModelAdmin):
+    raw_id_fields = ('customer',)
+    list_display = ('customer', 'type_of_contact', 'description')

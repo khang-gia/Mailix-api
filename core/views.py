@@ -453,7 +453,7 @@ class CustomerFilter(FilterSet):
 
   class Meta:
     model = Customer
-    fields = ['name', 'email', 'phone', 'address', 'company_name', 'type_of_customer', 'curators', 'customer_code']
+    fields = ['name', 'email', 'phone', 'address', 'company_name', 'type_of_customer', 'curators', 'customer_code', 'stage','status']
 
   def elastic_search(self, queryset, name, value):
     if not value:

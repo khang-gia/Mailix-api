@@ -184,18 +184,26 @@ class TitleListSerializer(serializers.ModelSerializer):
   class Meta:
     model = Title
     fields = '__all__'
-  
+
+class CustomerAdditionalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContactAddtionalInfo
+        exclude = ['customer',]
+
 class CustomerSerializer(serializers.ModelSerializer):
+    additional_infos = CustomerAdditionalSerializer(many=True, required=False)
     class Meta:
         model = Customer
         fields = '__all__'
 
     def create(self, validated_data):
       curators = validated_data.pop('curators', [])
+      additional_infos = validated_data.pop('additional_infos', [])
+      
       type_of_customer = validated_data.pop('type_of_customer', None)
       if type_of_customer == 1:
         company_fields = [
-        'company_name', 'company_code', 'company_address', 'company_phone',
+        'company_name', 'company_address', 'company_phone',
         'company_email', 'company_tax_code', 'company_type', 'line_of_business'
         ]
         for field in company_fields:
@@ -203,14 +211,19 @@ class CustomerSerializer(serializers.ModelSerializer):
         
       customer = Customer.objects.create(**validated_data)
       customer.curators.set(curators)
+      if additional_infos:
+        for info in additional_infos:
+          contact_additional_info = ContactAddtionalInfo.objects.create(customer=customer, **info)
       return customer
 
     def update(self, instance, validated_data):
       curators = validated_data.pop('curators', None)
       type_of_customer = validated_data.pop('type_of_customer', None)
+      additional_infos = validated_data.pop('additional_infos', [])
+      
       if type_of_customer == 1:
         company_fields = [
-        'company_name', 'company_code', 'company_address', 'company_phone',
+        'company_name', 'company_address', 'company_phone',
         'company_email', 'company_tax_code', 'company_type', 'line_of_business'
         ]
         for field in company_fields:
@@ -220,6 +233,10 @@ class CustomerSerializer(serializers.ModelSerializer):
       if curators is not None:
         instance.curators.set(curators)
       instance.save()
+      if additional_infos:
+        instance.additional_infos.all().delete()
+        for info in additional_infos:
+          ContactAddtionalInfo.objects.create(customer=instance, **info)
       return instance
 
 class CustomerListSerializer(serializers.ModelSerializer):
@@ -233,6 +250,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
 
 class CustomerDetailSerializer(serializers.ModelSerializer):
     curators = UserListSerializer(read_only=True, many=True)
+    additional_infos = CustomerAdditionalSerializer(many=True, read_only=True)
     class Meta:
         model = Customer
         fields = '__all__'
