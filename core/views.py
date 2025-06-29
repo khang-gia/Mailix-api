@@ -445,7 +445,7 @@ class CustomerFilter(FilterSet):
   search = django_filters.CharFilter(method='elastic_search')
   curator = django_filters.CharFilter(method='filter_curator')
   curator__isnull = django_filters.BooleanFilter(method='filter_curator_isnull')
-  
+  curators = django_filters.CharFilter(method='filter_curators')
   def filter_curator_isnull(self, queryset, name, value):
     if value:
       return queryset.filter(curators__isnull=True)
@@ -468,6 +468,13 @@ class CustomerFilter(FilterSet):
 
   def filter_curator(self, queryset, name, value):
     return queryset.filter(curators__id=value)  # Filter by a specific curator ID
+
+  def filter_curators(self, queryset, name, value):
+    if not value:
+        return queryset
+
+    curator_ids = value.split(',')
+    return queryset.filter(curators__id__in=curator_ids).distinct()
 
 class CustomerViewSet(viewsets.ModelViewSet):
   queryset = Customer.objects.all()
