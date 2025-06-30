@@ -20,6 +20,10 @@ from rest_framework.decorators import action
 from core.utils_feature import otp
 from core.utils_feature.mail import send_otp, send_forget_password_otp
 from rest_framework.views import APIView
+import secrets
+from django.conf import settings
+from django.contrib.auth.hashers import make_password, check_password
+from system.models import TrustedDevice
 
 def update_profile(request):
     data = request.data
@@ -107,6 +111,7 @@ def generate_otp_with_email(request, *args):
 @permission_classes([])
 def verify_otp(request, *args):
   username = request.data.get('username')
+  trust_device = request.data.get('is_trust_device', False)
   user = User.objects.filter(username=username).first()
   if not user:
     return Response({'username': ['User does not exist.']}, status=status.HTTP_400_BAD_REQUEST)
@@ -117,11 +122,39 @@ def verify_otp(request, *args):
     return Response(code.errors, status=status.HTTP_400_BAD_REQUEST)
   if not otp.verify(code.data['code'], code.data['email']):
     return Response({'code': ['Mã OTP không đúng hoặc đã hết hạn.']}, status=status.HTTP_400_BAD_REQUEST)
-  user = User.objects.filter(username=code.data['email']).first()
-  # user.profile.email_verified = True
-  # user.profile.save()
-  user_serializer = UserSerializer(user)
-  return Response(user_serializer.data, status=status.HTTP_200_OK)
+
+  # --- OTP is valid, now create a trusted device if requested ---
+  if trust_device:
+    # Generate a new secure token for the cookie
+    new_token = secrets.token_hex(32)
+    
+    # Hash the token before saving to the database
+    hashed_token = make_password(new_token)
+    
+    # Create the trusted device record
+    meta = request.META
+    ip_address = meta.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() if 'HTTP_X_FORWARDED_FOR' in meta else meta.get('REMOTE_ADDR', None)
+    user_agent = meta.get('HTTP_USER_AGENT', None)
+    TrustedDevice.objects.create(
+        user=user,
+        token=hashed_token,
+        ip_address=ip_address,
+        user_agent=user_agent
+    )
+    
+    # Create response and set the secure cookie
+    response = Response({'detail': 'Device is now trusted.'}, status=status.HTTP_200_OK)
+    response.set_cookie(
+        key='trusted_device',
+        value=new_token,
+        max_age=30 * 24 * 60 * 60,  # 30 days
+        secure=False,  # True in production
+        httponly=True,              # Crucial: prevents JS access
+        samesite='None'           # Highly recommended
+    )
+    print('Set trusted device cookie:', response.cookies.get('trusted_device'))
+    return response
+  return Response({'detail': 'Device is now trusted.'}, status=status.HTTP_200_OK)
 
 @api_view(['GET', 'PUT'])
 def profile_api(request):
@@ -138,8 +171,23 @@ def pre_login(request, *args):
     return Response(credential.errors, status=status.HTTP_400_BAD_REQUEST)
   user = authenticate(**credential.data)
   if not user:
-    return Response({'username': ['Email hoặc mật khẩu không đúng.']}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'username': ['Email hoặc mật khẩu không đúng.']}, status=status.HTTP_401_UNAUTHORIZED)
   user_serializer = UserSerializer(user)
+  print('cookies: ',request.COOKIES)
+  trusted_device_token = request.COOKIES.get('trusted_device')
+  print('trusted_device_token: ', trusted_device_token)
+  if trusted_device_token:
+    # Find a matching token for this user
+    for device in user.trusted_devices.all():
+      if check_password(trusted_device_token, device.token):
+        # Device is trusted, bypass OTP.
+        device.last_used_at = timezone.now()
+        device.save() 
+        
+        # Issue refresh token and log the user in
+        refresh = RefreshToken.for_user(user)
+        return Response({'access': str(refresh.access_token), 'refresh': str(refresh), 'user': user_serializer.data}, status=status.HTTP_200_OK)
+
   code = otp.generate(user.email)
   send_otp(user.email, code)
   return Response(user_serializer.data, status=status.HTTP_200_OK)
@@ -152,7 +200,7 @@ def login(request, *args):
     return Response(credential.errors, status=status.HTTP_400_BAD_REQUEST)
   user = authenticate(**credential.data)
   if not user:
-    return Response({'username': ['Email hoặc mật khẩu không đúng.']}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'username': ['Email hoặc mật khẩu không đúng.']}, status=status.HTTP_401_UNAUTHORIZED)
   user_serializer = UserSerializer(user)
   refresh = RefreshToken.for_user(user)
   return Response({'access': str(refresh.access_token), 'refresh': str(refresh), 'user': user_serializer.data}, status=status.HTTP_200_OK)
@@ -376,70 +424,29 @@ class TitleViewSet(viewsets.ModelViewSet):
     return TitleSerializer
 
 
-class LoginView(APIView):
-    def post(self, request, *args, **kwargs):
-        username = request.data.get('username')
-        password = request.data.get('password')
-        otp_code = request.data.get('otp_code')
-        remember_device = request.data.get('remember_device', False)
+class TrustedDeviceListView(APIView):
+    permission_classes = [IsAuthenticated]
 
-        user = authenticate(username=username, password=password)
+    def get(self, request, *args, **kwargs):
+        # Return simplified data, never the token itself
+        devices = request.user.trusted_devices.all().values(
+            'id', 'ip_address', 'user_agent', 'last_used_at'
+        )
+        return Response(list(devices))
 
-        if not user:
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-
-        # --- Check for a trusted device cookie BEFORE checking OTP ---
-        trusted_device_token = request.COOKIES.get('trusted_device')
-        if trusted_device_token:
-            # Find a matching token for this user
-            for device in user.trusted_devices.all():
-                if check_password(trusted_device_token, device.token):
-                    # Device is trusted, bypass OTP.
-                    # Update last used timestamp
-                    device.save() 
-                    
-                    # Issue auth token and log the user in
-                    auth_token, _ = Token.objects.get_or_create(user=user)
-                    return Response({'token': auth_token.key, 'detail': 'Login successful.'})
-
-        # --- If no trusted device, proceed with OTP check ---
-        if not is_valid_otp(user, otp_code): # Replace with your actual OTP validation logic
-             return Response({'error': 'Invalid OTP'}, status=status.HTTP_401_UNAUTHORIZED)
+    def delete(self, request, *args, **kwargs):
+        device_id = request.data.get('device_id')
+        if not device_id:
+            return Response({'error': 'Device ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # --- OTP is valid, now create a trusted device if requested ---
-        if remember_device:
-            # Generate a new secure token for the cookie
-            new_token = secrets.token_hex(32)
-            
-            # Hash the token before saving to the database
-            hashed_token = make_password(new_token)
-            
-            # Create the trusted device record
-            TrustedDevice.objects.create(
-                user=user,
-                token=hashed_token,
-                ip_address=request.META.get('REMOTE_ADDR'),
-                user_agent=request.META.get('HTTP_USER_AGENT', '')
-            )
-            
-            # Issue auth token
-            auth_token, _ = Token.objects.get_or_create(user=user)
-            
-            # Create response and set the secure cookie
-            response = Response({'token': auth_token.key, 'detail': 'Login and device verification successful.'})
-            response.set_cookie(
-                key='trusted_device',
-                value=new_token,
-                max_age=30 * 24 * 60 * 60,  # 30 days
-                secure=not settings.DEBUG,  # True in production
-                httponly=True,              # Crucial: prevents JS access
-                samesite='Strict'           # Highly recommended
-            )
-            return response
+        # Ensure the user can only delete their own devices
+        try:
+            device_to_delete = request.user.trusted_devices.get(id=device_id)
+            device_to_delete.delete()
+            return Response({'detail': 'Device has been removed.'}, status=status.HTTP_204_NO_CONTENT)
+        except TrustedDevice.DoesNotExist:
+            return Response({'error': 'Device not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # --- If not remembering device, just log in normally after OTP ---
-        auth_token, _ = Token.objects.get_or_create(user=user)
-        return Response({'token': auth_token.key, 'detail': 'Login successful.'})
 
 class CustomerFilter(FilterSet):
   search = django_filters.CharFilter(method='elastic_search')

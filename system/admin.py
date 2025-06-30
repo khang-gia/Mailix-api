@@ -25,3 +25,8 @@ class BusinessUnitAdmin(admin.ModelAdmin):
 class CompanyAdmin(admin.ModelAdmin):
   raw_id_fields=('legal_representative',)
   list_display = ('name','code','tax_code','phone','status','establishment_date','legal_representative')
+
+@admin.register(TrustedDevice)
+class TrustedDeviceAdmin(admin.ModelAdmin):
+    list_display = ('user', 'ip_address', 'user_agent', 'last_used_at')
+    raw_id_fields = ('user',)

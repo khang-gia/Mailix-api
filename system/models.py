@@ -103,9 +103,9 @@ class SystemGroup(BaseCreateUpdateModel):
     def __str__(self) -> str:
         return "SystemGroup <{}>".format(self.name)
 
-class TrustedDevice(models.Model):
+class TrustedDevice(BaseCreateUpdateModel):
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        'auth.User',
         on_delete=models.CASCADE,
         related_name='trusted_devices'
     )
@@ -116,7 +116,6 @@ class TrustedDevice(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.CharField(max_length=512, null=True, blank=True)
     
-    created_at = models.DateTimeField(auto_now_add=True)
     last_used_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
