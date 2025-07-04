@@ -254,3 +254,55 @@ class CustomerDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = '__all__'
+
+
+class WorkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Works
+        fields = '__all__'
+
+    def create(self, validated_data):
+      assigned_to = validated_data.pop('assigned_to', [])
+      assigned_by = validated_data.pop('assigned_by', [])
+      managers = validated_data.pop('managers', [])
+      work = Works.objects.create(**validated_data)
+      work.assigned_to.set(assigned_to)
+      work.assigned_by.set(assigned_by)
+      work.managers.set(managers)
+      return work
+
+    def update(self, instance, validated_data):
+      assigned_to = validated_data.pop('assigned_to', None)
+      assigned_by = validated_data.pop('assigned_by', None)
+      managers = validated_data.pop('managers', None)
+
+      for attr, value in validated_data.items():
+        setattr(instance, attr, value)
+      
+      if assigned_to is not None:
+        instance.assigned_to.set(assigned_to)
+      if assigned_by is not None:
+        instance.assigned_by.set(assigned_by)
+      if managers is not None:
+        instance.managers.set(managers)
+      instance.save()
+      return instance
+
+class WorkListSerializer(serializers.ModelSerializer):
+    assigned_to = UserOtherViewSerializer(read_only=True, many=True)
+    assigned_by = UserOtherViewSerializer(read_only=True, many=True)
+    managers = UserOtherViewSerializer(read_only=True, many=True)
+    created_by = UserOtherViewSerializer(read_only=True)
+    class Meta:
+        model = Works
+        fields = '__all__'
+      
+
+class WorkDetailSerializer(serializers.ModelSerializer):
+    assigned_to = UserListSerializer(read_only=True, many=True)
+    assigned_by = UserListSerializer(read_only=True, many=True)
+    managers = UserListSerializer(read_only=True, many=True)
+    
+    class Meta:
+        model = Works
+        fields = '__all__'

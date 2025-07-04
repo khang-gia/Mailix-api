@@ -592,15 +592,47 @@ class ContactAddtionalInfo(models.Model):
 
 #     def __str__(self):
 #         return self.full_name
-  
-# class Works(BaseCreateUpdateModel):
-#     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='works', db_index=True)
-#     title = models.CharField("Title", max_length=200, db_index=True)
-#     description = models.TextField("Description", null=True, blank=True)
-#     start_date = models.DateField("Start Date", null=True, blank=True, db_index=True)
-#     end_date = models.DateField("End Date", null=True, blank=True, db_index=True)
-#     status = models.CharField("Status", max_length=50, null=True, blank=True, db_index=True)
-#     history = HistoricalRecords()
+PRIORITY_CHOICES = (
+  (1, 'Low'),
+  (2, 'Medium'),
+  (3, 'High'),
+  (4, 'Urgent'),
+  (5, 'Critical'),
+)
+STATUSES = (
+  (1, 'Not Started'),
+  (2, 'In Progress'),
+  (3, 'Completed'),
+  (4, 'On Hold'),
+  (5, 'Cancelled'),
+  (6, 'Deferred'),
+  (7, 'Waiting for Review'),
+  (8, 'Approved'),
+  (9, 'Rejected'),
+  (10, 'Pending'),
+  (11, 'Failed'),
+  (12, 'Success'),
+  (13, 'Archived'),
+  (14, 'Deleted'),
+  (15, 'Draft'),
+)
+class Works(BaseCreateUpdateModel):
+    name = models.CharField("Name", max_length=200, db_index=True)
+    code = models.CharField("Code", max_length=100, unique=True, null=True, blank=True, db_index=True)
+    description = models.TextField("Description", null=True, blank=True)
+    start_date = models.DateTimeField("Start Date", null=True, blank=True, db_index=True)
+    end_date = models.DateTimeField("End Date", null=True, blank=True, db_index=True)
+    actual_start_date = models.DateTimeField("Actual start Date", null=True, blank=True, db_index=True)
+    assigned_to = models.ManyToManyField(User, related_name='works', blank=True, db_index=True)
+    assigned_by = models.ManyToManyField(User, related_name='assigned_works', blank=True, db_index=True)
+    assigned_at = models.DateTimeField("Assigned At", null=True, blank=True, db_index=True)
+    managers = models.ManyToManyField(User, related_name='managed_works', blank=True, db_index=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_works', db_index=True)
+    priority = models.IntegerField("Priority", choices=PRIORITY_CHOICES, default=2, null=True, blank=True, db_index=True)
+    status = models.IntegerField("Status", choices=STATUSES, default=1, null=True, blank=True, db_index=True)
+    progress = models.PositiveIntegerField(default=0)
+    related_work = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_works', db_index=True)
+    history = HistoricalRecords()
 
-#     def __str__(self):
-#         return self.title
+    def __str__(self):
+        return "Work <{}> {}".format(self.pk, self.name)

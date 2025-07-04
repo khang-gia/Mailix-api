@@ -1,12 +1,12 @@
 from django.shortcuts import render
-from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR, Title, Customer
+from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR, Title, Customer, Works
 # Create your views here.
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import UserSerializer, ProfileSerializer, LoginSerializer, SystemNotificationSerializer, FeedbackSerializer, HappeningEventSerializer, HotEventSerializer,\
   CredentialsSerializer, ProfileHRListSerializer, ProfileHRDetailSerializer, ProfileHRSerializer, UserListSerializer, TitleSerializer, TitleListSerializer, UsernameSerializer, \
-    OTPSerializer, CustomerSerializer, CustomerListSerializer, CustomerDetailSerializer
+    OTPSerializer, CustomerSerializer, CustomerListSerializer, CustomerDetailSerializer, WorkSerializer, WorkListSerializer, WorkDetailSerializer
 from django_filters.rest_framework import FilterSet
 import django_filters
 from django.db.models import Q, Count
@@ -541,3 +541,72 @@ class CustomerViewSet(viewsets.ModelViewSet):
     customer.save()
 
     return Response(CustomerSerializer(customer).data, status=status.HTTP_200_OK)
+
+class WorkFilter(FilterSet):
+  search = django_filters.CharFilter(method='elastic_search')
+  assigned_to_person = django_filters.CharFilter(method='filter_assigned_to_person')
+  assigned_to__isnull = django_filters.BooleanFilter(method='filter_curator_isnull')
+  assigned_to = django_filters.CharFilter(method='filter_assigned_to')
+
+  class Meta:
+    model = Works
+    fields = ['name', 'assigned_to','status','code']
+
+  def filter_curator_isnull(self, queryset, name, value):
+    if value:
+      return queryset.filter(assigned_to__isnull=True)
+    return queryset.exclude(assigned_to__isnull=True)
+
+  def elastic_search(self, queryset, name, value):
+    if not value:
+      return queryset
+    
+    fields = ['name__icontains','code__icontains']
+    _q = Q()
+    for field in fields:
+      _q = _q | Q(**{field: value})
+
+    return queryset.filter(_q)
+
+  def filter_assigned_to_person(self, queryset, name, value):
+    return queryset.filter(assigned_to__id=value)  # Filter by a specific curator ID
+
+  def filter_assigned_to(self, queryset, name, value):
+    if not value:
+        return queryset
+
+    assigned_to__ids = value.split(',')
+    return queryset.filter(assigned_to__id__in=assigned_to__ids).distinct()
+
+class WorkViewSet(viewsets.ModelViewSet):
+  queryset = Works.objects.all()
+  serializer_class = WorkSerializer
+  filterset_class = WorkFilter
+  ordering_fields = ['id']
+  ordering = ('-id',)
+
+  def get_serializer_class(self):
+    if self.action == 'list':
+      return WorkListSerializer
+    elif self.action == 'retrieve':
+      return WorkDetailSerializer
+    return WorkSerializer
+  
+  @action(detail=False, methods=['post'])
+  def delete_work(self, request, pk=None):
+    # role = request.user.profile.role
+    # print(role)
+    # if role == 'M':
+    #   return Response(status=status.HTTP_403_FORBIDDEN)
+    work_ids = request.data['profiles']
+    if not work_ids:
+      return Response(status=status.HTTP_400_BAD_REQUEST)
+    for work_id in work_ids:
+      try:
+        work = Works.objects.get(pk=work_id)
+        work.delete()
+      except Works.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+      except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(status=status.HTTP_200_OK)

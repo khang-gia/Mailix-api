@@ -22,3 +22,7 @@ class CustomerAdmin(admin.ModelAdmin):
 class ContactAddtionalInfoAdmin(admin.ModelAdmin):
     raw_id_fields = ('customer',)
     list_display = ('customer', 'type_of_contact', 'description')
+
+@admin.register(Works)
+class WorkAdmin(admin.ModelAdmin):
+  list_display = ('name', 'code')
