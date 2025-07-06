@@ -62,8 +62,8 @@ class BusinessUnit(BaseCreateUpdateModel):
         return "BusinessUnit{}".format(self.name)
  
 DEPARTMENT_TYPES = (
-    ('CB', 'Company branch'),
-    ('DP', 'Department')
+    (1, 'Company branch'),
+    (2, 'Department')
 )
 class Department(BaseCreateUpdateModel):
     code = models.CharField("Code", max_length=20, null=True, blank=True, db_index=True)
@@ -72,7 +72,7 @@ class Department(BaseCreateUpdateModel):
     description = models.TextField("Description", null=True, blank=True)
     parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="childen", db_index=True)
     business_unit = models.ForeignKey("BusinessUnit", on_delete=models.SET_NULL, null=True, blank=True, related_name="departments", db_index=True)
-    department_type = models.CharField("Department Type", choices=DEPARTMENT_TYPES, default='DP', max_length=10)
+    department_type = models.IntegerField("Department Type", choices=DEPARTMENT_TYPES, default=1)
     company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name="departments",db_index=True)
     history = HistoricalRecords()
 

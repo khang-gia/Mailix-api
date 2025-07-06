@@ -10,10 +10,28 @@ from rest_framework import status
 from .models import Department
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated
+import django_filters
+
+class DepartmentFilter(FilterSet):
+    search = django_filters.CharFilter(method='elastic_search')
+    class Meta:
+        model = Department
+        fields = ['name', 'code']
+
+    def elastic_search(self, queryset, name, value):
+        if not value:
+            return queryset
+        fields = ['name__icontains', 'code__icontains']
+        _q = Q()
+        for field in fields:
+         _q = _q | Q(**{field: value})
+        
+        return queryset.filter(_q)
 
 class DepartmentViewSet(viewsets.ModelViewSet):
   queryset = Department.objects.all()
   serializer_class = DepartmentSerializer
+  filterset_class = DepartmentFilter
   ordering_fields = ['id']
   ordering = ('-id',)
   

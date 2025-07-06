@@ -247,6 +247,30 @@ CACHES = {
         },
         "TIMEOUT": 60*60*12, # 12 hours
     },
+    "hr": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.getenv('CACHE_HR_LOCATION', 'redis://127.0.0.1:6379/2'),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "TIMEOUT": 60*60*24*30 # max 30 days
+    },
+    "customer": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.getenv('CACHE_CUSTOMER_LOCATION', 'redis://127.0.0.1:6379/3'),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "TIMEOUT": 60*60*24*30 # max 30 days
+    },
+    "contact": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.getenv('CACHE_CONTACT_LOCATION', 'redis://127.0.0.1:6379/4'),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "TIMEOUT": 60*60*24*30 # max 30 days
+    }
 }
 CELERY_DEFAULT_QUEUE = os.getenv('CELERY_DEFAULT_QUEUE', '')
 try:
