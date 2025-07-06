@@ -148,9 +148,9 @@ def verify_otp(request, *args):
         key='trusted_device',
         value=new_token,
         max_age=30 * 24 * 60 * 60,  # 30 days
-        secure=False,  # True in production
+        secure=True,  # True in production
         httponly=True,              # Crucial: prevents JS access
-        samesite='None'           # Highly recommended
+        samesite='Lax'           # Highly recommended
     )
     print('Set trusted device cookie:', response.cookies.get('trusted_device'))
     return response
@@ -411,9 +411,26 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
     profile_hr.save()
     return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
+class TitleFilter(FilterSet):
+    search = django_filters.CharFilter(method='elastic_search')
+    class Meta:
+        model = Title
+        fields = ['name', 'code']
+
+    def elastic_search(self, queryset, name, value):
+        if not value:
+            return queryset
+        fields = ['name__icontains', 'code__icontains']
+        _q = Q()
+        for field in fields:
+         _q = _q | Q(**{field: value})
+        
+        return queryset.filter(_q)
+
 class TitleViewSet(viewsets.ModelViewSet):
   queryset = Title.objects.all()
   serializer_class = TitleSerializer
+  filterset_class = TitleFilter
   ordering_fields = ['id']
   ordering = ('-id',)
   
