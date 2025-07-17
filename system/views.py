@@ -7,11 +7,11 @@ from django.contrib.auth.models import User
 from rest_framework.response import Response
 from rest_framework import status
 # Create your views here.
-from .models import Department
+from .models import Department, ScheduleEvent
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated
 import django_filters
-
+from core.serializers import ScheduleEventSerializer, ScheduleEventListSerializer
 class DepartmentFilter(FilterSet):
     search = django_filters.CharFilter(method='elastic_search')
     class Meta:
@@ -39,3 +39,31 @@ class DepartmentViewSet(viewsets.ModelViewSet):
     if self.action == 'list':
       return DepartmentListSerializer
     return DepartmentSerializer
+
+class ScheduleEventFilter(FilterSet):
+    search = django_filters.CharFilter(method='elastic_search')
+    class Meta:
+        model = ScheduleEvent
+        fields = ['title',]
+
+    def elastic_search(self, queryset, name, value):
+        if not value:
+            return queryset
+        fields = ['title__icontains',]
+        _q = Q()
+        for field in fields:
+         _q = _q | Q(**{field: value})
+        
+        return queryset.filter(_q)
+
+class ScheduleEventViewSet(viewsets.ModelViewSet):
+  queryset = ScheduleEvent.objects.all()
+  serializer_class = ScheduleEventSerializer
+  filterset_class = ScheduleEventFilter
+  ordering_fields = ['id']
+  ordering = ('-id',)
+  
+  def get_serializer_class(self):
+    if self.action == 'list':
+      return ScheduleEventListSerializer
+    return ScheduleEventSerializer

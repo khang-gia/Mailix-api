@@ -121,6 +121,105 @@ class TrustedDevice(BaseCreateUpdateModel):
     def __str__(self):
         return f"{self.user.username}'s device"
 
+REMINDER_UNIT_CHOICES = [
+    ('minutes', 'Minutes before'),
+    ('hours', 'Hours before'),
+    ('days', 'Days before'),
+]
+FREQ_CHOICES = [
+    ('none', 'Does not repeat'),
+    ('daily', 'Every day'),
+    ('weekly', 'Every week'),
+    ('monthly', 'Every month'),
+]
+
+WEEKDAY_CHOICES = [
+    ('mon', 'Monday'),
+    ('tue', 'Tuesday'),
+    ('wed', 'Wednesday'),
+    ('thu', 'Thursday'),
+    ('fri', 'Friday'),
+    ('sat', 'Saturday'),
+    ('sun', 'Sunday'),
+]
+
+class ScheduleEvent(BaseCreateUpdateModel):
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='schedule_events',db_index=True
+    )
+    participants = models.ManyToManyField('auth.User', related_name='p_schedule_events', null=True, blank=True, db_index=True)
+    title = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField(blank=True)
+
+    start_datetime = models.DateTimeField(db_index=True)
+    end_datetime = models.DateTimeField(db_index=True)
+
+    is_all_day = models.BooleanField(default=False, db_index=True)
+
+    location = models.CharField(max_length=255, blank=True)
+
+    # Optional: Event color, like Google Calendar (could be used for categories)
+    color = models.CharField(max_length=20, blank=True, null=True, db_index=True)
+
+    # Reminder/notification
+    has_reminder = models.BooleanField(default=False, db_index=True)
+    reminder_minutes_before = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Notify X minutes before the event starts"
+    )
+
+    # Future: recurrence support
+    recurrence_rule = models.CharField(
+        max_length=255, blank=True,
+        help_text="Optional iCal RRULE for recurring events"
+    )
+    reminder_time_value = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="How long before the event to send a reminder"
+    )
+
+    reminder_time_unit = models.CharField(
+        max_length=10,
+        choices=REMINDER_UNIT_CHOICES,
+        default='minutes',
+        help_text="Unit for reminder time"
+    )
+
+    reminder_email = models.EmailField(
+        blank=True,
+        help_text="Optional email address to send reminder to"
+    )
+
+    frequency = models.CharField(
+        max_length=10,
+        choices=FREQ_CHOICES,
+        default='none',
+        db_index=True,
+        help_text="How often this event repeats"
+    )
+
+    repeat_on_weekdays = models.JSONField(
+        blank=True, null=True,
+        help_text="List of weekdays if frequency is weekly. Example: ['mon', 'wed']"
+    )
+
+    repeat_until = models.DateField(
+        null=True, blank=True,
+        help_text="Stop repeating after this date"
+    )
+
+    class Meta:
+        ordering = ['start_datetime']
+
+    def __str__(self):
+        return f"{self.title} - {self.user}"
+
+    def is_past(self):
+        from django.utils import timezone
+        return self.end_datetime < timezone.now()
+
 # Decentralization
 # class GroupResource(models.Model):
 # 	group = models.CharField(max_length=255, null=True, blank=True, verbose_name='group')

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import *
+from system.models import ScheduleEvent
 from system.serializers import DepartmentListSerializer
 # class ProfileSerializer(serializers.ModelSerializer):
 #     class Meta:
@@ -305,4 +306,16 @@ class WorkDetailSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Works
+        fields = '__all__'
+
+
+class ScheduleEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScheduleEvent
+        fields = '__all__'
+
+class ScheduleEventListSerializer(serializers.ModelSerializer):
+    user = UserOtherViewSerializer(read_only=True)
+    class Meta:
+        model = ScheduleEvent
         fields = '__all__'

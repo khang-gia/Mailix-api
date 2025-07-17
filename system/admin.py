@@ -30,3 +30,8 @@ class CompanyAdmin(admin.ModelAdmin):
 class TrustedDeviceAdmin(admin.ModelAdmin):
     list_display = ('user', 'ip_address', 'user_agent', 'last_used_at')
     raw_id_fields = ('user',)
+
+@admin.register(ScheduleEvent)
+class ScheduleEventAdmin(admin.ModelAdmin):
+  list_display = ('title', 'description', 'start_datetime', 'end_datetime', 'is_all_day')
+  raw_id_fields = ('user',)

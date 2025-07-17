@@ -4,5 +4,6 @@ from system import views
 
 router = routers.SimpleRouter()
 router.register(r'departments', views.DepartmentViewSet)
+router.register(r'schedule-events', views.ScheduleEventViewSet)
 urlpatterns = router.urls + [
 ]
