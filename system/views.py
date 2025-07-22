@@ -11,7 +11,7 @@ from .models import Department, ScheduleEvent
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated
 import django_filters
-from core.serializers import ScheduleEventSerializer, ScheduleEventListSerializer
+from core.serializers import ScheduleEventSerializer, ScheduleEventListSerializer, ScheduleEventDetailSerializer
 class DepartmentFilter(FilterSet):
     search = django_filters.CharFilter(method='elastic_search')
     class Meta:
@@ -66,4 +66,6 @@ class ScheduleEventViewSet(viewsets.ModelViewSet):
   def get_serializer_class(self):
     if self.action == 'list':
       return ScheduleEventListSerializer
+    elif self.action == 'retrieve':
+      return ScheduleEventDetailSerializer
     return ScheduleEventSerializer

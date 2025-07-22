@@ -125,6 +125,7 @@ REMINDER_UNIT_CHOICES = [
     ('minutes', 'Minutes before'),
     ('hours', 'Hours before'),
     ('days', 'Days before'),
+    ('weeks', 'Weeks before'),
 ]
 FREQ_CHOICES = [
     ('none', 'Does not repeat'),
@@ -142,7 +143,14 @@ WEEKDAY_CHOICES = [
     ('sat', 'Saturday'),
     ('sun', 'Sunday'),
 ]
-
+PRIORITY_CHOICES = (
+  (1, 'Low'),
+  (2, 'Medium'),
+  (3, 'High'),
+  (4, 'Urgent'),
+  (5, 'Critical'),
+  (6, 'None'),
+)
 class ScheduleEvent(BaseCreateUpdateModel):
     user = models.ForeignKey(
         'auth.User',
@@ -152,7 +160,17 @@ class ScheduleEvent(BaseCreateUpdateModel):
     participants = models.ManyToManyField('auth.User', related_name='p_schedule_events', null=True, blank=True, db_index=True)
     title = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(blank=True)
-
+    priority = models.IntegerField("Priority", choices=PRIORITY_CHOICES, default=2, null=True, blank=True, db_index=True)
+    notification_type = models.IntegerField(
+        choices=(
+            (1, 'Email'),
+            (2, 'SMS'),
+            (3, 'Push Notification'),
+        ),
+        default=3,
+        db_index=True,
+        help_text="Type of notification to send"
+    )
     start_datetime = models.DateTimeField(db_index=True)
     end_datetime = models.DateTimeField(db_index=True)
 
@@ -162,19 +180,9 @@ class ScheduleEvent(BaseCreateUpdateModel):
 
     # Optional: Event color, like Google Calendar (could be used for categories)
     color = models.CharField(max_length=20, blank=True, null=True, db_index=True)
-
+    work = models.ForeignKey('core.Works', on_delete=models.SET_NULL, null=True, blank=True, related_name='schedule_events', db_index=True)
     # Reminder/notification
     has_reminder = models.BooleanField(default=False, db_index=True)
-    reminder_minutes_before = models.PositiveIntegerField(
-        null=True, blank=True,
-        help_text="Notify X minutes before the event starts"
-    )
-
-    # Future: recurrence support
-    recurrence_rule = models.CharField(
-        max_length=255, blank=True,
-        help_text="Optional iCal RRULE for recurring events"
-    )
     reminder_time_value = models.PositiveIntegerField(
         null=True, blank=True,
         help_text="How long before the event to send a reminder"
@@ -191,6 +199,17 @@ class ScheduleEvent(BaseCreateUpdateModel):
         blank=True,
         help_text="Optional email address to send reminder to"
     )
+    is_send_participants = models.BooleanField(
+        default=False,
+        help_text="Send reminder to all participants"
+    )
+    # Future: recurrence support. repeat config
+    is_recurring = models.BooleanField(default=False)
+    recurrence_rule = models.CharField(
+        max_length=255, blank=True,
+        help_text="Optional iCal RRULE for recurring events"
+    )
+    
 
     frequency = models.CharField(
         max_length=10,
@@ -220,6 +239,12 @@ class ScheduleEvent(BaseCreateUpdateModel):
         from django.utils import timezone
         return self.end_datetime < timezone.now()
 
+# class ScheduleEventNotifications(models.Model):
+#     schedule_event = models.ForeignKey(ScheduleEvent, on_delete=models.CASCADE, related_name='emails', db_index=True)
+#     recipient_email = models.EmailField()
+
+#     def __str__(self):
+#         return f"Notification for {self.schedule_event} to {self.recipient_email}"    
 # Decentralization
 # class GroupResource(models.Model):
 # 	group = models.CharField(max_length=255, null=True, blank=True, verbose_name='group')

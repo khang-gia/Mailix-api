@@ -119,6 +119,8 @@ TYPE_PASSPORT_CHOICES = (
 class Title(models.Model):
   code = models.CharField("Code", max_length=20)
   name = models.CharField("Name", max_length=50)
+  description = models.TextField('Description',null=True, blank=True)
+
 
   def __str__(self):
       return "Title <{}> {}".format(self.pk, self.name)
@@ -598,6 +600,7 @@ PRIORITY_CHOICES = (
   (3, 'High'),
   (4, 'Urgent'),
   (5, 'Critical'),
+  (6, 'None'),
 )
 STATUSES = (
   (1, 'Not Started'),

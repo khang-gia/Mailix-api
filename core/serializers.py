@@ -256,8 +256,45 @@ class CustomerDetailSerializer(serializers.ModelSerializer):
         model = Customer
         fields = '__all__'
 
+class ScheduleEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScheduleEvent
+        fields = '__all__'
+
+    def create(self, validated_data):
+      participants = validated_data.pop('participants', [])
+      event = ScheduleEvent.objects.create(**validated_data)
+      event.participants.set(participants)
+      return event
+
+    def update(self, instance, validated_data):
+      participants = validated_data.pop('participants', None)
+
+      for attr, value in validated_data.items():
+        setattr(instance, attr, value)
+      
+      if participants is not None:
+        instance.participants.set(participants)
+      
+      instance.save()
+      return instance
+
+class ScheduleEventListSerializer(serializers.ModelSerializer):
+    user = UserOtherViewSerializer(read_only=True)
+    class Meta:
+        model = ScheduleEvent
+        exclude = [ 'participants']
+
+class ScheduleEventDetailSerializer(serializers.ModelSerializer):
+    user = UserOtherViewSerializer(read_only=True)
+    participants = UserListSerializer(read_only=True, many=True)
+    
+    class Meta:
+        model = ScheduleEvent
+        fields = '__all__'
 
 class WorkSerializer(serializers.ModelSerializer):
+    schedule = ScheduleEventSerializer(required=False, allow_null=True)
     class Meta:
         model = Works
         fields = '__all__'
@@ -266,16 +303,23 @@ class WorkSerializer(serializers.ModelSerializer):
       assigned_to = validated_data.pop('assigned_to', [])
       assigned_by = validated_data.pop('assigned_by', [])
       managers = validated_data.pop('managers', [])
+      schedule_data = validated_data.pop('schedule', None)
       work = Works.objects.create(**validated_data)
       work.assigned_to.set(assigned_to)
       work.assigned_by.set(assigned_by)
       work.managers.set(managers)
+      if schedule_data:
+        participants = schedule_data.pop('participants', [])
+        schedule_data['user'] = work.created_by if not schedule_data.get('user') else schedule_data['user']
+        schedule_event = ScheduleEvent.objects.create(work=work, **schedule_data)
+        schedule_event.participants.set(participants)
       return work
 
     def update(self, instance, validated_data):
       assigned_to = validated_data.pop('assigned_to', None)
       assigned_by = validated_data.pop('assigned_by', None)
       managers = validated_data.pop('managers', None)
+      # schedule_data = validated_data.pop('schedule', None)
 
       for attr, value in validated_data.items():
         setattr(instance, attr, value)
@@ -286,6 +330,14 @@ class WorkSerializer(serializers.ModelSerializer):
         instance.assigned_by.set(assigned_by)
       if managers is not None:
         instance.managers.set(managers)
+      # if schedule_data:
+      #   try:
+      #     schedule_event = ScheduleEvent.objects.get(work=instance)
+      #     for attr, value in schedule_data.items():
+      #       setattr(schedule_event, attr, value)
+      #     schedule_event.save()
+      #   except ScheduleEvent.DoesNotExist:
+      #     ScheduleEvent.objects.create(work=instance, **schedule_data)
       instance.save()
       return instance
 
@@ -308,14 +360,4 @@ class WorkDetailSerializer(serializers.ModelSerializer):
         model = Works
         fields = '__all__'
 
-
-class ScheduleEventSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ScheduleEvent
-        fields = '__all__'
-
-class ScheduleEventListSerializer(serializers.ModelSerializer):
-    user = UserOtherViewSerializer(read_only=True)
-    class Meta:
-        model = ScheduleEvent
-        fields = '__all__'
+  
