@@ -333,10 +333,36 @@ class HotEventViewSet(viewsets.ReadOnlyModelViewSet):
   ordering = ('-id',)
 
 class ProfileHRFilter(FilterSet):
+  departments = django_filters.CharFilter(method='filter_departments')
+  direct_managers = django_filters.CharFilter(method='filter_direct_managers')
+  search = django_filters.CharFilter(method='elastic_search')
   class Meta:
     model = ProfileHR
     fields = ['full_name','employee_code','status']
 
+  def elastic_search(self, queryset, name, value):
+    if not value:
+        return queryset
+    fields = ['name__icontains', 'profile_code__icontains']
+    _q = Q()
+    for field in fields:
+      _q = _q | Q(**{field: value})
+    
+    return queryset.filter(_q)
+
+  def filter_departments(self, queryset, name, value):
+    if not value:
+        return queryset
+
+    department_ids = value.split(',')
+    return queryset.filter(department__id__in=department_ids).distinct()
+
+  def filter_direct_managers(self, queryset, name, value):
+    if not value:
+        return queryset
+
+    direct_manager_ids = value.split(',')
+    return queryset.filter(direct_manager__id__in=direct_manager_ids).distinct()
 class ProfileHRViewSet(viewsets.ModelViewSet):
   queryset = ProfileHR.objects.all()
   serializer_class = ProfileHRSerializer
@@ -470,6 +496,8 @@ class CustomerFilter(FilterSet):
   curator = django_filters.CharFilter(method='filter_curator')
   curator__isnull = django_filters.BooleanFilter(method='filter_curator_isnull')
   curators = django_filters.CharFilter(method='filter_curators')
+  statuses = django_filters.CharFilter(method='filter_statuses')
+
   def filter_curator_isnull(self, queryset, name, value):
     if value:
       return queryset.filter(curators__isnull=True)
@@ -477,7 +505,7 @@ class CustomerFilter(FilterSet):
 
   class Meta:
     model = Customer
-    fields = ['name', 'email', 'phone', 'address', 'company_name', 'type_of_customer', 'curators', 'customer_code', 'stage','status']
+    fields = ['name', 'email', 'phone', 'address', 'company_name', 'type_of_customer', 'curators', 'customer_code', 'stage','status', 'customer_source', 'customer_group']
 
   def elastic_search(self, queryset, name, value):
     if not value:
@@ -499,6 +527,14 @@ class CustomerFilter(FilterSet):
 
     curator_ids = value.split(',')
     return queryset.filter(curators__id__in=curator_ids).distinct()
+
+  def filter_statuses(self, queryset, name, value):
+    if not value:
+        return queryset
+
+    status_ids = value.split(',')
+    print('status_ids', status_ids)
+    return queryset.filter(status__in=status_ids).distinct()
 
 class CustomerViewSet(viewsets.ModelViewSet):
   queryset = Customer.objects.all()
@@ -562,14 +598,17 @@ class CustomerViewSet(viewsets.ModelViewSet):
 class WorkFilter(FilterSet):
   search = django_filters.CharFilter(method='elastic_search')
   assigned_to_person = django_filters.CharFilter(method='filter_assigned_to_person')
-  assigned_to__isnull = django_filters.BooleanFilter(method='filter_curator_isnull')
-  assigned_to = django_filters.CharFilter(method='filter_assigned_to')
-
+  assigned_to__isnull = django_filters.BooleanFilter(method='filter_assigned_to_isnull')
+  assigned_tos = django_filters.CharFilter(method='filter_assigned_tos')
+  assigned_bys = django_filters.CharFilter(method='filter_assigned_bys')
+  managers = django_filters.CharFilter(method='filter_managers')
+  statuses = django_filters.CharFilter(method='filter_statuses')
+  priorities = django_filters.CharFilter(method='filter_priorities')
   class Meta:
     model = Works
-    fields = ['name', 'assigned_to','status','code']
+    fields = ['name', 'assigned_to','status','code', 'priority']
 
-  def filter_curator_isnull(self, queryset, name, value):
+  def filter_assigned_to_isnull(self, queryset, name, value):
     if value:
       return queryset.filter(assigned_to__isnull=True)
     return queryset.exclude(assigned_to__isnull=True)
@@ -588,12 +627,40 @@ class WorkFilter(FilterSet):
   def filter_assigned_to_person(self, queryset, name, value):
     return queryset.filter(assigned_to__id=value)  # Filter by a specific curator ID
 
-  def filter_assigned_to(self, queryset, name, value):
+  def filter_assigned_tos(self, queryset, name, value):
     if not value:
         return queryset
 
     assigned_to__ids = value.split(',')
     return queryset.filter(assigned_to__id__in=assigned_to__ids).distinct()
+
+  def filter_assigned_bys(self, queryset, name, value):
+    if not value:
+        return queryset
+
+    assigned_by_ids = value.split(',')
+    return queryset.filter(assigned_by__id__in=assigned_by_ids).distinct()
+
+  def filter_managers(self, queryset, name, value):
+    if not value:
+        return queryset
+
+    manager_ids = value.split(',')
+    return queryset.filter(managers__id__in=manager_ids).distinct()
+
+  def filter_statuses(self, queryset, name, value):
+    if not value:
+        return queryset
+
+    status_ids = value.split(',')
+    return queryset.filter(status__in=status_ids).distinct()
+  
+  def filter_priorities(self, queryset, name, value):
+    if not value:
+        return queryset
+
+    priority_ids = value.split(',')
+    return queryset.filter(priority__in=priority_ids).distinct()
 
 class WorkViewSet(viewsets.ModelViewSet):
   queryset = Works.objects.all()

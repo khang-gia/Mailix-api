@@ -25,4 +25,4 @@ class ContactAddtionalInfoAdmin(admin.ModelAdmin):
 
 @admin.register(Works)
 class WorkAdmin(admin.ModelAdmin):
-  list_display = ('name', 'code')
+  list_display = ('name', 'code', 'status',)
