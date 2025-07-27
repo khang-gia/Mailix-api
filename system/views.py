@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from rest_framework.response import Response
 from rest_framework import status
 # Create your views here.
-from .models import Department, ScheduleEvent
+from .models import Department, ScheduleEvent, BusinessUnit
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated
 import django_filters
@@ -16,12 +16,12 @@ class DepartmentFilter(FilterSet):
     search = django_filters.CharFilter(method='elastic_search')
     class Meta:
         model = Department
-        fields = ['name', 'code']
+        fields = ['name', 'code','department_type']
 
     def elastic_search(self, queryset, name, value):
         if not value:
             return queryset
-        fields = ['name__icontains', 'code__icontains']
+        fields = ['name__icontains', 'code__icontains', 'location__icontains']
         _q = Q()
         for field in fields:
          _q = _q | Q(**{field: value})
@@ -38,6 +38,8 @@ class DepartmentViewSet(viewsets.ModelViewSet):
   def get_serializer_class(self):
     if self.action == 'list':
       return DepartmentListSerializer
+    elif self.action =='retrieve':
+      return DepartmentDetailSerializer
     return DepartmentSerializer
 
 class ScheduleEventFilter(FilterSet):
@@ -69,3 +71,32 @@ class ScheduleEventViewSet(viewsets.ModelViewSet):
     elif self.action == 'retrieve':
       return ScheduleEventDetailSerializer
     return ScheduleEventSerializer
+
+
+class BusinessUnitFilter(FilterSet):
+    search = django_filters.CharFilter(method='elastic_search')
+    class Meta:
+        model = BusinessUnit
+        fields = ['name', 'description']
+
+    def elastic_search(self, queryset, name, value):
+        if not value:
+            return queryset
+        fields = ['name__icontains']
+        _q = Q()
+        for field in fields:
+         _q = _q | Q(**{field: value})
+        
+        return queryset.filter(_q)
+
+class BusinessUnittViewSet(viewsets.ModelViewSet):
+  queryset = BusinessUnit.objects.all()
+  serializer_class = BusinessUnitSerializer
+  filterset_class = BusinessUnitFilter
+  ordering_fields = ['id']
+  ordering = ('-id',)
+  
+  def get_serializer_class(self):
+    if self.action == 'list':
+      return BusinessUnitListSerializer
+    return BusinessUnitSerializer

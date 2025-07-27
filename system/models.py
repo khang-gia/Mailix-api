@@ -73,14 +73,15 @@ class Department(BaseCreateUpdateModel):
     parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="childen", db_index=True)
     business_unit = models.ForeignKey("BusinessUnit", on_delete=models.SET_NULL, null=True, blank=True, related_name="departments", db_index=True)
     department_type = models.IntegerField("Department Type", choices=DEPARTMENT_TYPES, default=1)
-    company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name="departments",db_index=True)
+    # company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name="departments",db_index=True)
     history = HistoricalRecords()
 
     def _str_(self) -> str:
         return "Department <{}> {}".format(self.pk, self.name)
 
 
-class AccountType(BaseModel):
+class ConfigVolume(BaseModel):
+    """This model is used to set the type of account, for config and other purposes"""
     name = models.CharField("Name", max_length=50, db_index=True)
     code = models.CharField("Code", max_length=20, null=True, blank=True, db_index=True)
     description = models.TextField("Description", null=True, blank=True)
@@ -90,14 +91,15 @@ class AccountType(BaseModel):
     history = HistoricalRecords()
 
     def __str__(self) -> str:
-        return "AccountType <{}>".format(self.name)
+        return "ConfigVolume <{}>".format(self.name)
 
 
 class SystemGroup(BaseCreateUpdateModel):
+    """This model is used to store system groups (for decentralization only)"""
     name = models.CharField("Name", max_length=50, db_index=True)
     code = models.CharField("Code", max_length=20, null=True, blank=True, db_index=True)
     description = models.TextField("Description", null=True, blank=True)
-    account_type = models.ForeignKey("AccountType", on_delete=models.SET_NULL, null=True, blank=True, related_name="system_groups", db_index=True)
+    # account_type = models.ForeignKey("AccountType", on_delete=models.SET_NULL, null=True, blank=True, related_name="system_groups", db_index=True)
 
     history = HistoricalRecords()
     def __str__(self) -> str:
