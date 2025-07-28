@@ -9,12 +9,12 @@ from system.serializers import DepartmentListSerializer
 #         fields = '__all__'
 
 class LoginSerializer(serializers.Serializer):
-  username = serializers.EmailField(max_length=100, required=True)
+  username = serializers.CharField(max_length=100, required=True)
   password = serializers.CharField(max_length=100, required=True)
   
   def to_representation(self, instance):
     data = super().to_representation(instance)
-    data['email'] = data['username']
+    # data['email'] = data['username']
     return data
 
 class OTPSerializer(serializers.Serializer):

@@ -15,6 +15,7 @@ admin.site.register(Profile)
 @admin.register(ProfileHR)
 class ProfileHRAdmin(admin.ModelAdmin):
   list_display = ('full_name', 'status', 'department', 'direct_manager')
+  raw_id_fields = ('user','department')
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):

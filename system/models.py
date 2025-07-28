@@ -81,7 +81,7 @@ class Department(BaseCreateUpdateModel):
     history = HistoricalRecords()
 
     def _str_(self) -> str:
-        return "Department <{}> {}".format(self.pk, self.name)
+        return "Department {}".format(self.name)
 
 UNIT_CHOICES = (
     ('GB', 'GB'),

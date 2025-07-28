@@ -388,7 +388,8 @@ class Profile(BaseCreateUpdateModel):
 def create_user_profile(sender, instance, created, **kwargs):
 	if created:
 		Profile.objects.create(user=instance)
-		ProfileHR.objects.create(user=instance)
+		# if not ProfileHR.objects.filter(user=instance).exists():
+		# 	ProfileHR.objects.create(user=instance)
 
 
 CONTRACT_TYPES = (
