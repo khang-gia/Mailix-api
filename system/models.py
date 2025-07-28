@@ -48,6 +48,8 @@ class Company(BaseCreateUpdateModel):
     description = models.TextField("Description", null=True, blank=True)
     website = models.URLField("Website", null=True, blank=True, db_index=True)
     email = models.EmailField("Email", null=True, blank=True, db_index=True)
+    # config_volume = models.ForeignKey('ConfigVolume', on_delete=models.SET_NULL, null=True, blank=True, related_name='companies', db_index=True)
+
     history = HistoricalRecords()
 
     def __str__(self) -> str:
@@ -74,18 +76,27 @@ class Department(BaseCreateUpdateModel):
     business_unit = models.ForeignKey("BusinessUnit", on_delete=models.SET_NULL, null=True, blank=True, related_name="departments", db_index=True)
     department_type = models.IntegerField("Department Type", choices=DEPARTMENT_TYPES, default=1)
     # company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name="departments",db_index=True)
+    group = models.ForeignKey('SystemGroup', on_delete=models.SET_NULL, null=True, blank=True, related_name='departments', db_index=True)
+    config_volume = models.ForeignKey('ConfigVolume', on_delete=models.SET_NULL, null=True, blank=True, related_name='departments', db_index=True)
     history = HistoricalRecords()
 
     def _str_(self) -> str:
         return "Department <{}> {}".format(self.pk, self.name)
 
+UNIT_CHOICES = (
+    ('GB', 'GB'),
+    ('MB', 'MB'),
+    ('KB', 'KB'),
+    ('FILE', 'FILE'),
+)
 
 class ConfigVolume(BaseModel):
-    """This model is used to set the type of account, for config and other purposes"""
+    """This model is used to set the type of account (small scope, only effect under company level as department), for config and other purposes"""
     name = models.CharField("Name", max_length=50, db_index=True)
     code = models.CharField("Code", max_length=20, null=True, blank=True, db_index=True)
     description = models.TextField("Description", null=True, blank=True)
     quota = models.CharField("Quota", null=True, max_length=200 ,blank=True, db_index=True)
+    unit = models.CharField("Unit", max_length=20, null=True, blank=True, db_index=True, choices=UNIT_CHOICES)
     unit_price = models.DecimalField("Unit Price", max_digits=10, decimal_places=2, db_index=True)
     user_amount = models.PositiveIntegerField("User Amount")
     history = HistoricalRecords()
@@ -93,12 +104,21 @@ class ConfigVolume(BaseModel):
     def __str__(self) -> str:
         return "ConfigVolume <{}>".format(self.name)
 
+class SystemResource(BaseModel):
+    name = models.CharField(max_length=255, null=True, blank=True)
+    code = models.CharField("Code", max_length=20, null=True, blank=True, db_index=True)
+    apps = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField("Description", null=True, blank=True)
+
+    def __str__(self) -> str:
+        return "SystemResource <{}>".format(self.name)
 
 class SystemGroup(BaseCreateUpdateModel):
     """This model is used to store system groups (for decentralization only)"""
     name = models.CharField("Name", max_length=50, db_index=True)
     code = models.CharField("Code", max_length=20, null=True, blank=True, db_index=True)
     description = models.TextField("Description", null=True, blank=True)
+    resources = models.ManyToManyField(SystemResource, related_name='groups', db_index=True)
     # account_type = models.ForeignKey("AccountType", on_delete=models.SET_NULL, null=True, blank=True, related_name="system_groups", db_index=True)
 
     history = HistoricalRecords()

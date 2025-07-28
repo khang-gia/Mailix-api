@@ -312,6 +312,7 @@ class ProfileHR(BaseCreateUpdateModel):
     public_name = models.CharField('Bút danh', max_length=50, null=True, blank=True)
     # status = models.CharField('Status', choices=PROFILE_STATUSES, default='Active', max_length=100, null=True, blank=True)
     status = models.IntegerField('Status', choices=PROFILE_STATUSES, default=0, null=True, blank=True, db_index=True)
+    group = models.ForeignKey('system.SystemGroup',  on_delete=models.SET_NULL, related_name="profile_hrs", null=True, blank=True)
     history = HistoricalRecords()
 
     def __str__(self):
@@ -387,6 +388,8 @@ class Profile(BaseCreateUpdateModel):
 def create_user_profile(sender, instance, created, **kwargs):
 	if created:
 		Profile.objects.create(user=instance)
+		ProfileHR.objects.create(user=instance)
+
 
 CONTRACT_TYPES = (
   (0, 'Probationary'),

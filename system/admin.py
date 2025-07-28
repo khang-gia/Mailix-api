@@ -2,10 +2,6 @@ from django.contrib import admin
 from .models import *
 # Register your models here.
 
-@admin.register(SystemGroup)
-class SystemGroupAdmin(admin.ModelAdmin):
-  list_display = ('name','code')
-
 @admin.register(ConfigVolume)
 class ConfigVolume(admin.ModelAdmin):
   list_display = ('name', 'code', 'user_amount', 'quota', 'unit_price')
@@ -34,3 +30,13 @@ class TrustedDeviceAdmin(admin.ModelAdmin):
 class ScheduleEventAdmin(admin.ModelAdmin):
   list_display = ('title', 'description', 'start_datetime', 'end_datetime', 'is_all_day')
   raw_id_fields = ('user',)
+
+@admin.register(SystemGroup)
+class SystemGroupAdmin(admin.ModelAdmin):
+  list_display = ('name','code')
+  raw_id_fields = ('resources',)
+
+@admin.register(SystemResource)
+class SystemResourceAdmin(admin.ModelAdmin):
+  list_display = ('name',)
+

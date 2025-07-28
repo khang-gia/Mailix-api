@@ -12,6 +12,8 @@ from .serializers import *
 from rest_framework.permissions import IsAuthenticated
 import django_filters
 from core.serializers import ScheduleEventSerializer, ScheduleEventListSerializer, ScheduleEventDetailSerializer
+from rest_framework.decorators import action
+
 class DepartmentFilter(FilterSet):
     search = django_filters.CharFilter(method='elastic_search')
     class Meta:
@@ -41,6 +43,27 @@ class DepartmentViewSet(viewsets.ModelViewSet):
     elif self.action =='retrieve':
       return DepartmentDetailSerializer
     return DepartmentSerializer
+
+  @action(detail=False, methods=['post'])
+  def delete_departments(self, request, pk=None):
+    # role = request.user.profile.role
+    # print(role)
+    # if role == 'M':
+    #   return Response(status=status.HTTP_403_FORBIDDEN)
+    department_ids = request.data['departments']
+    if not department_ids:
+      return Response(status=status.HTTP_400_BAD_REQUEST)
+    for department_id in department_ids:
+      try:
+        department = Department.objects.get(pk=department_id)
+        department.delete()
+      except Department.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+      except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(status=status.HTTP_200_OK)
+
+
 
 class ScheduleEventFilter(FilterSet):
     search = django_filters.CharFilter(method='elastic_search')
@@ -100,3 +123,75 @@ class BusinessUnittViewSet(viewsets.ModelViewSet):
     if self.action == 'list':
       return BusinessUnitListSerializer
     return BusinessUnitSerializer
+
+class SystemResourceFilter(FilterSet):
+  search = django_filters.CharFilter(method='elastic_search')
+
+  class Meta:
+    model = SystemResource
+    fields = ['name', 'description']
+
+  def elastic_search(self, queryset, name, value):
+    if not value:
+      return queryset
+      fields = ['name__icontains']
+      _q = Q()
+      for field in fields:
+        _q = _q | Q(**{field: value})
+
+      return queryset.filter(_q)
+
+class SystemResourceViewSet(viewsets.ModelViewSet):
+  queryset = SystemResource.objects.all()
+  serializer_class = SystemResourceSerializer
+  filterset_class = SystemResourceFilter
+
+
+class SystemGroupFilter(FilterSet):
+    search = django_filters.CharFilter(method='elastic_search')
+    class Meta:
+        model = SystemGroup
+        fields = ['name', 'code']
+
+    def elastic_search(self, queryset, name, value):
+        if not value:
+            return queryset
+        fields = ['name__icontains',]
+        _q = Q()
+        for field in fields:
+          _q = _q | Q(**{field: value})
+        
+        return queryset.filter(_q)
+
+class SystemGroupViewSet(viewsets.ModelViewSet):
+  queryset = SystemGroup.objects.all()
+  serializer_class = SystemGroupSerializer
+  filterset_class = SystemGroupFilter
+  ordering_fields = ['id']
+  ordering = ('-id',)
+  
+  def get_serializer_class(self):
+    if self.action == 'list':
+      return SystemGroupListSerializer
+    elif self.action =='retrieve':
+      return SystemGroupDetailSerializer
+    return SystemGroupSerializer
+
+  @action(detail=False, methods=['post'])
+  def delete_groups(self, request, pk=None):
+    # role = request.user.profile.role
+    # print(role)
+    # if role == 'M':
+    #   return Response(status=status.HTTP_403_FORBIDDEN)
+    group_ids = request.data['groups']
+    if not group_ids:
+      return Response(status=status.HTTP_400_BAD_REQUEST)
+    for group_id in group_ids:
+      try:
+        group = SystemGroup.objects.get(pk=group_id)
+        group.delete()
+      except SystemGroup.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+      except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(status=status.HTTP_200_OK)
