@@ -148,7 +148,7 @@ def verify_otp(request, *args):
         key='trusted_device',
         value=new_token,
         max_age=30 * 24 * 60 * 60,  # 30 days
-        secure=True,  # True in production
+        secure=settings.COOKIE_SECURE_FLAG,  # True in production
         httponly=True,              # Crucial: prevents JS access
         samesite='Lax'           # Highly recommended
     )
