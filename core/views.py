@@ -188,7 +188,7 @@ def pre_login(request, *args):
         # Issue refresh token and log the user in
         # refresh = RefreshToken.for_user(user)
         # return Response({'access': str(refresh.access_token), 'refresh': str(refresh), 'user': user_serializer.data}, status=status.HTTP_200_OK)
-        return Response({'allowed_login':true}, status=status.HTTP_200_OK)
+        return Response({'allowed_login':True}, status=status.HTTP_200_OK)
 
   code = otp.generate(user.email)
   send_otp(user.email, code)
