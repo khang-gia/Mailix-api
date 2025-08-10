@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from rest_framework.response import Response
 from rest_framework import status
 # Create your views here.
-from .models import Department, ScheduleEvent, BusinessUnit
+from .models import Department, ScheduleEvent, BusinessUnit, Company
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated
 import django_filters
@@ -58,7 +58,7 @@ class DepartmentViewSet(viewsets.ModelViewSet):
         department = Department.objects.get(pk=department_id)
         department.delete()
       except Department.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+        pass
       except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(status=status.HTTP_200_OK)
@@ -191,7 +191,33 @@ class SystemGroupViewSet(viewsets.ModelViewSet):
         group = SystemGroup.objects.get(pk=group_id)
         group.delete()
       except SystemGroup.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+        pass
       except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(status=status.HTTP_200_OK)
+
+
+
+class CompanyFilter(FilterSet):
+    search = django_filters.CharFilter(method='elastic_search')
+    class Meta:
+        model = Company
+        fields = ['name', 'code']
+
+    def elastic_search(self, queryset, name, value):
+        if not value:
+            return queryset
+        fields = ['name__icontains']
+        _q = Q()
+        for field in fields:
+         _q = _q | Q(**{field: value})
+        
+        return queryset.filter(_q)
+
+class CompanyViewSet(viewsets.ModelViewSet):
+  queryset = Company.objects.all()
+  serializer_class = CompanySerializer
+  filterset_class = CompanyFilter
+  ordering_fields = ['id']
+  ordering = ('-id',)
+  

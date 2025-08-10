@@ -86,3 +86,15 @@ class BusinessUnitSerializer(serializers.ModelSerializer):
     class Meta:
         model = BusinessUnit
         fields = '__all__'
+
+class PackageConfigSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PackageConfig
+        fields = '__all__'
+    
+class CompanySerializer(serializers.ModelSerializer):
+    package_config = PackageConfigSerializer(read_only=True)
+    class Meta:
+        model = Company
+        fields = '__all__'

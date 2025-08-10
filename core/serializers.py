@@ -166,6 +166,7 @@ class CredentialsSerializer(serializers.Serializer):
 class ProfileHRListSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True)
     title_name = serializers.CharField(source='title.name', read_only=True)
+    system_date_joined = serializers.DateTimeField(source='user.date_joined', read_only=True)
     class Meta:
       model = ProfileHR
       fields = '__all__'

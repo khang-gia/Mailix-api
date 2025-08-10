@@ -8,5 +8,6 @@ router.register(r'business-units', views.BusinessUnittViewSet)
 router.register(r'schedule-events', views.ScheduleEventViewSet)
 router.register(r'resources', views.SystemResourceViewSet)
 router.register(r'groups', views.SystemGroupViewSet)
+router.register(r'company', views.CompanyViewSet)
 urlpatterns = router.urls + [
 ]

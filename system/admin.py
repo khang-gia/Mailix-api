@@ -15,7 +15,9 @@ class DepartmentAdmin(admin.ModelAdmin):
 @admin.register(BusinessUnit)
 class BusinessUnitAdmin(admin.ModelAdmin):
   list_display = ('name',)
-
+@admin.register(PackageConfig)
+class PackageConfigAdmin(admin.ModelAdmin):
+  list_display = ('name', 'code', 'price', 'maximum_user','maximum_email', 'maximum_customer','maximum_contact')
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
   raw_id_fields=('legal_representative',)
@@ -28,7 +30,7 @@ class TrustedDeviceAdmin(admin.ModelAdmin):
 
 @admin.register(ScheduleEvent)
 class ScheduleEventAdmin(admin.ModelAdmin):
-  list_display = ('title', 'description', 'start_datetime', 'end_datetime', 'is_all_day')
+  list_display = ('title', 'user', 'start_datetime', 'end_datetime', 'is_all_day')
   raw_id_fields = ('user',)
 
 @admin.register(SystemGroup)

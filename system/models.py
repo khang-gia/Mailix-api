@@ -28,6 +28,23 @@ COMPANY_STATUSES = (
   (1, "Suspend"),
   (9, "Others"),
 )
+INDUSTRY_CHOICES = (
+  (1, 'Retail'),
+  (2, 'Wholesale'),
+  (3, 'Manufacturing'),
+  (4, 'Service'),
+  (5, 'Technology'),
+  (6, 'Healthcare'),
+  (7, 'Education'),
+  (8, 'Finance'),
+  (9, 'Real Estate'),
+  (10, 'Transportation'),
+  (11, 'Construction'),
+  (12, 'Hospitality'),
+  (13, 'Entertainment'),
+  (14, 'Agriculture'),
+  (15, 'Other'),
+)
 class Company(BaseCreateUpdateModel):
     name = models.CharField('Name',max_length=100, db_index=True)
     code = models.CharField('Code (AKA)', max_length=100, null=True, blank=True, db_index=True)
@@ -48,6 +65,7 @@ class Company(BaseCreateUpdateModel):
     description = models.TextField("Description", null=True, blank=True)
     website = models.URLField("Website", null=True, blank=True, db_index=True)
     email = models.EmailField("Email", null=True, blank=True, db_index=True)
+    industry = models.IntegerField("Industry", choices=INDUSTRY_CHOICES, null=True, blank=True, db_index=True)
     # config_volume = models.ForeignKey('ConfigVolume', on_delete=models.SET_NULL, null=True, blank=True, related_name='companies', db_index=True)
 
     history = HistoricalRecords()

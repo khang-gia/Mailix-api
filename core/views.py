@@ -556,7 +556,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
     # print(role)
     # if role == 'M':
     #   return Response(status=status.HTTP_403_FORBIDDEN)
-    customer_ids = request.data['profiles']
+    customer_ids = request.data['customers']
     if not customer_ids:
       return Response(status=status.HTTP_400_BAD_REQUEST)
     for customer_id in customer_ids:
@@ -691,6 +691,25 @@ class WorkViewSet(viewsets.ModelViewSet):
         work.delete()
       except Works.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
+      except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(status=status.HTTP_200_OK)
+
+  @action(detail=False, methods=['post'])
+  def delete_works(self, request, pk=None):
+    # role = request.user.profile.role
+    # print(role)
+    # if role == 'M':
+    #   return Response(status=status.HTTP_403_FORBIDDEN)
+    work_ids = request.data['works']
+    if not work_ids:
+      return Response(status=status.HTTP_400_BAD_REQUEST)
+    for work_id in work_ids:
+      try:
+        work = Works.objects.get(pk=work_id)
+        work.delete()
+      except Works.DoesNotExist:
+        pass
       except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(status=status.HTTP_200_OK)
