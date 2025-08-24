@@ -13,7 +13,7 @@ from django.db.models import Q, Count
 from django.contrib.auth.models import User
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, user_logged_in
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import action
 
@@ -25,7 +25,8 @@ from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
 from system.models import TrustedDevice
 from django.utils import timezone
-
+from system.miab import add_mail_user
+from django.db import transaction
 def update_profile(request):
     data = request.data
     user_serializer = UserSerializer(request.user, data = data)
@@ -419,24 +420,32 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
   def create_account(self, request, pk=None):
     profile_hr = self.get_object()
     email = request.data.get('email', None)
+    authen_email = request.data.get('authen_email', None)
     username = request.data.get('username', None)
     password = request.data.get('password', None)
-    if not username or not email or not password:
-      return Response({'detail': 'Username, email, and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not username or not email or not authen_email or not password:
+      return Response({'detail': 'Username, email, authen_email and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
     if not profile_hr:
       return Response({'detail': 'Profile not found.'}, status=status.HTTP_404_NOT_FOUND)
     
-    if User.objects.filter(email=email).exists():
-      return Response({'detail': 'Email is already in use by another account.'}, status=status.HTTP_400_BAD_REQUEST)
+    if User.objects.filter(email=authen_email).exists():
+      return Response({'detail': 'Authen email is already in use by another account.'}, status=status.HTTP_400_BAD_REQUEST)
     
     if User.objects.filter(username=username).exists():
       return Response({'detail': 'Username is already in use by another account.'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    user = User.objects.create_user(username=username, email=email)
-    user.set_password(password)
-    user.save()
-    profile_hr.user = user
-    profile_hr.save()
+    try:
+      with transaction.atomic():
+        user = User.objects.create_user(username=username, email=authen_email)
+        user.set_password(password)
+        user.save()
+        success, res = add_mail_user(email, password)
+        if not success:
+          raise Exception('Cannot create email account on Mail-in-a-Box server.')
+        profile_hr.user = user
+        profile_hr.email = email
+        profile_hr.save()
+    except Exception as e:
+      return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 class TitleFilter(FilterSet):

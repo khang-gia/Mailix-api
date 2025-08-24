@@ -54,6 +54,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'simple_history',
+
+    'constance', #must before project apps
     'core',
     'consult',
     'system',
@@ -207,7 +209,23 @@ LOGGING = {
             "class": "logging.handlers.SocketHandler",
             "host": "localhost",
             "port": 9020
-        }
+        },
+        'mailer': {
+            'level': 'INFO',
+            'filename': BASE_DIR / 'logs/mailer.log',
+            'class':'logging.handlers.RotatingFileHandler',
+            'maxBytes' : 1024*1024*20, # 10MB
+            'backupCount': 7,
+            'formatter': 'app'
+        },
+        'miab': { # log for mail-in-a-box integration
+            'level': 'INFO',
+            'filename': BASE_DIR / 'logs/miab.log',
+            'class':'logging.handlers.RotatingFileHandler',
+            'maxBytes' : 1024*1024*20, # 50MB
+            'backupCount': 7,
+            'formatter': 'app'
+        },
 
     },
     'loggers': {
@@ -226,7 +244,17 @@ LOGGING = {
         'background': {
             'handlers': ['socket'],
             'level': 'INFO',
-        }
+        },
+        "mailer": {
+            "handlers": ["mailer"],
+            "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
+        "miab": {
+            "handlers": ["miab"],
+            "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
     },
 }
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
@@ -270,9 +298,20 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
         "TIMEOUT": 60*60*24*30 # max 30 days
-    }
+    },
+
 }
 CELERY_DEFAULT_QUEUE = os.getenv('CELERY_DEFAULT_QUEUE', '')
+CONSTANCE_BACKEND = 'constance.backends.database.DatabaseBackend'
+CONSTANCE_CONFIG = {
+    'MIAB_USERNAME': ('you@example.com', 'Mail-in-a-Box username (email)'),
+    'MIAB_PASSWORD': ('', 'Mail-in-a-Box password or API key'),
+    'MIAB_URL': ('https://your-mailinabox-server.example.com', 'Mail-in-a-Box server URL'),
+    'COMPANY_NETWORK_IP': (
+        '', 'List of IP addresses of the company network (comma-separated)', str,
+    ),
+}
+
 try:
     from .local_settings import *
 except Exception as e:
