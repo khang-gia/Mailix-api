@@ -53,7 +53,7 @@ class UserSerializer(serializers.ModelSerializer):
     profile_hr = ProfileHRDetailSerializer(read_only=True, required=False)
     class Meta:
         model = User
-        exclude = ['password', 'user_permissions', 'is_superuser', 'is_staff']
+        exclude = ['password', 'user_permissions', 'is_staff']
 
     def get_display_name(self, obj):
         return '%s %s'%(obj.first_name, obj.last_name) if obj.first_name else obj.username if not hasattr(obj, 'profile_hr') else obj.profile_hr.full_name

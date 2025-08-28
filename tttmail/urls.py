@@ -25,8 +25,8 @@ from core.views import login, register, pre_login, generate_otp, verify_otp, gen
 from django.conf.urls.static import static
 from django.conf import settings
 
-admin.site.site_header = 'Titaca'
-admin.site.site_title = 'Titaca'
+admin.site.site_header = 'Mailix'
+admin.site.site_title = 'Mailix'
 app_name_prefix = settings.APP_NAME_PREFIX
 
 urlpatterns = [
