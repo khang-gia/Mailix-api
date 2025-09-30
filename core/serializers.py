@@ -40,6 +40,7 @@ class ProfileHRDetailSerializer(serializers.ModelSerializer):
     title_name = serializers.CharField(source='title.name', read_only=True)
     type_of_labor_name = serializers.CharField(source='get_type_of_labor_display', read_only=True)
     direct_manager = UserListSerializer(read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
     class Meta:
       model = ProfileHR
       fields = '__all__'
