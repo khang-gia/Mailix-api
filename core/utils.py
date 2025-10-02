@@ -1,5 +1,6 @@
 import datetime
-
+import secrets
+import string
 import xlwt
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -97,3 +98,8 @@ def queryset_to_workbook(queryset,
 
 def get_user_name(u):
     return "{} {}".format(u.first_name, u.last_name) if u.first_name else u.username
+
+
+def generate_secure_password(length: int = 12) -> str:
+    characters = string.ascii_letters + string.digits + string.punctuation
+    return ''.join(secrets.choice(characters) for _ in range(length))

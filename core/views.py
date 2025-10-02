@@ -18,13 +18,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import action
 
 from core.utils_feature import otp
-from core.utils_feature.mail import send_otp, send_forget_password_otp
+from core.utils_feature.mail import send_otp, send_forget_password_otp, send_password_on_create_user
 from rest_framework.views import APIView
 import secrets
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
 from system.models import TrustedDevice
 from django.utils import timezone
+from core.utils import generate_secure_password
 from system.miab import add_mail_user
 from django.db import transaction
 def update_profile(request):
@@ -423,8 +424,10 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
     authen_email = request.data.get('authen_email', None)
     username = request.data.get('username', None)
     password = request.data.get('password', None)
-    if not username or not email or not authen_email or not password:
-      return Response({'detail': 'Username, email, authen_email and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not password:
+      password = generate_secure_password(12)
+    if not username or not email or not password or not authen_email:
+      return Response({'detail': 'Username, email and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
     if not profile_hr:
       return Response({'detail': 'Profile not found.'}, status=status.HTTP_404_NOT_FOUND)
     
@@ -444,6 +447,7 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
         profile_hr.user = user
         profile_hr.email = email
         profile_hr.save()
+        transaction.on_commit(lambda: send_password_on_create_user(authen_email, email, username, password))
     except Exception as e:
       return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)

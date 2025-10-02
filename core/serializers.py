@@ -41,6 +41,7 @@ class ProfileHRDetailSerializer(serializers.ModelSerializer):
     type_of_labor_name = serializers.CharField(source='get_type_of_labor_display', read_only=True)
     direct_manager = UserListSerializer(read_only=True)
     username = serializers.CharField(source='user.username', read_only=True)
+    authen_email = serializers.CharField(source='user.email', read_only=True)
     class Meta:
       model = ProfileHR
       fields = '__all__'
@@ -173,10 +174,34 @@ class ProfileHRListSerializer(serializers.ModelSerializer):
       fields = '__all__'
 
 class ProfileHRSerializer(serializers.ModelSerializer):
-    
+    authen_email = serializers.EmailField(required=False, allow_null=True)
     class Meta:
       model = ProfileHR
       fields = '__all__'
+      
+    def create(self, validated_data):
+      authen_email = validated_data.pop('authen_email', None)
+      print('Authen email:', authen_email)
+      profile_hr = ProfileHR.objects.create(**validated_data)
+      if authen_email:
+          profile_hr.user.email = authen_email
+          profile_hr.user.save()
+      return profile_hr
+      
+    def update(self, instance, validated_data):
+      authen_email = validated_data.pop('authen_email', None)
+      print('Authen email:', authen_email)
+      # update profile fields
+      for attr, value in validated_data.items():
+          setattr(instance, attr, value)
+      instance.save()
+
+      # update user authen_email if provided
+      if authen_email:
+          instance.user.email = authen_email
+          instance.user.save()
+
+      return instance
 
 class TitleSerializer(serializers.ModelSerializer):
   class Meta:

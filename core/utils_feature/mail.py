@@ -3,7 +3,7 @@ from django.template.loader import render_to_string
 from celery import shared_task
 from django.conf import settings
 import logging
-
+from django.utils import timezone
 logger = logging.getLogger('mailer')
 
 def send_otp(to_email, otp):
@@ -41,7 +41,21 @@ def send_error_500_email(error_message=None, error_url=None, error_detail=None):
             'error_detail': error_detail
         }
     )
-
+    
+def send_password_on_create_user(to_email, miab_mail, username, password):
+    logger.info('send_password_on_create_user: {} - {}'.format(to_email, username))
+    send_mail_in_background.delay(
+        to_emails = [to_email],
+        template_url = 'mails/create_user.html', 
+        subject = '[MAILIX.VN] Thông tin tài khoản',
+        context = {
+            'email': to_email,
+            'miab_mail': miab_mail,
+            'username': username,
+            'password': password,
+            'year': timezone.now().year
+        }
+    )
 
 @shared_task
 def send_to_admins(template_url, subject, context):
