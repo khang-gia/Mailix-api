@@ -346,7 +346,7 @@ class ProfileHRFilter(FilterSet):
   def elastic_search(self, queryset, name, value):
     if not value:
         return queryset
-    fields = ['name__icontains', 'profile_code__icontains']
+    fields = ['full_name__icontains', 'profile_code__icontains', 'employee_code__icontains', 'department__name__icontains']
     _q = Q()
     for field in fields:
       _q = _q | Q(**{field: value})
