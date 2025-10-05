@@ -313,6 +313,7 @@ class ProfileHR(BaseCreateUpdateModel):
     # status = models.CharField('Status', choices=PROFILE_STATUSES, default='Active', max_length=100, null=True, blank=True)
     status = models.IntegerField('Status', choices=PROFILE_STATUSES, default=0, null=True, blank=True, db_index=True)
     group = models.ForeignKey('system.SystemGroup',  on_delete=models.SET_NULL, related_name="profile_hrs", null=True, blank=True)
+    is_first_login = models.BooleanField('Is First Login', default=True)
     history = HistoricalRecords()
 
     def __str__(self):

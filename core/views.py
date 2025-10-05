@@ -447,7 +447,7 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
         profile_hr.user = user
         profile_hr.email = email
         profile_hr.save()
-        transaction.on_commit(lambda: send_password_on_create_user(authen_email, email, username, password))
+        transaction.on_commit(lambda: send_password_on_create_user(authen_email, emailmode, username, password))
     except Exception as e:
       return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
