@@ -307,6 +307,7 @@ class ProfileHR(BaseCreateUpdateModel):
     #Contact Info
     phone_number = models.CharField('Phone Number', max_length=20, null=True, blank=True)
     email = models.EmailField('Email', null=True, blank=True)
+    personal_email = models.EmailField('Personal Email', null=True, blank=True)
     permanent_address = models.CharField('Permanent Address', max_length=200, null=True, blank=True)
     current_address = models.CharField('Current Address', max_length=200, null=True, blank=True)
     public_name = models.CharField('Bút danh', max_length=50, null=True, blank=True)
