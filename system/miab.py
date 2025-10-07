@@ -66,9 +66,12 @@ def post_data(url, data={}, max_retry=3, headers={}):
             headers=headers,
             data=data
         )
+        
     except Exception as e:
-        logger.error(f"post_data exception: {e}")
-        print('post_data exception', e)
+        logger.error(f"post_data exception: {e} - retry: {max_retry}")
+        print(f"post_data exception: {e} - retry: {max_retry}")
+        if max_retry - 1 <= 0:
+            return parse_post(response)
         return post_data(url, data, max_retry - 1, headers)
 
     if response.status_code != 200:
