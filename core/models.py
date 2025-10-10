@@ -544,7 +544,7 @@ class Customer(BaseCreateUpdateModel):
     website = models.URLField("Website", null=True, blank=True)
     status = models.IntegerField("Status", choices=CUSTOMER_STATUSES, default=1, null=True, blank=True, db_index=True)
     stage = models.IntegerField("Stage", choices=CUSTOMER_STAGES, default=1, null=True, blank=True, db_index=True)
-    title = models.IntegerField("Title", choices=TITLES, null=True, blank=True, db_index=True)
+    title = models.CharField("Title", max_length=15,  null=True, blank=True, db_index=True)
     history = HistoricalRecords()
 
     def __str__(self):

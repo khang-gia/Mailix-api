@@ -62,6 +62,24 @@ def reset_password(request, *args):
   return Response(user_serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
+def change_password(request, *args):
+  new_password = request.data.get('new_password', None)
+  old_password = request.data.get('old_password', None)
+  user = request.user
+  if not user.check_password(old_password):
+    return Response({'detail': 'PASSWORD_INVALID'}, status=status.HTTP_401_UNAUTHORIZED)
+  if not new_password:
+    return Response({'detail': 'PASSWORD IS REQUIRED'}, status=status.HTTP_400_BAD_REQUEST)
+  user.set_password(new_password)
+  user.save()
+  profile_hr= user.profile_hr
+  profile_hr.is_first_login = False
+  profile_hr.save()
+  user_serializer = UserSerializer(user)
+  return Response(user_serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
 @permission_classes([])
 def register(request, *args):
   credential = CredentialsSerializer(data=request.data)
@@ -281,18 +299,18 @@ class UserViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
        return super().update(request, *args, **kwargs)
     
-@api_view(['POST'])
-def change_password(request):
-  user = request.user
-  if user.check_password(request.data['password']):
-    try:
-      # allow to change
-      user.set_password(request.data['new_password'])
-      user.save()
-      return Response(status=status.HTTP_200_OK)
-    except Exception as e:
-      return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-  return Response({'detail': 'PASSWORD_INVALID'}, status=status.HTTP_400_BAD_REQUEST)
+# @api_view(['POST'])
+# def change_password(request):
+#   user = request.user
+#   if user.check_password(request.data['password']):
+#     try:
+#       # allow to change
+#       user.set_password(request.data['new_password'])
+#       user.save()
+#       return Response(status=status.HTTP_200_OK)
+#     except Exception as e:
+#       return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+#   return Response({'detail': 'PASSWORD_INVALID'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 

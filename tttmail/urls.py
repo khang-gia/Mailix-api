@@ -20,7 +20,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from core.views import login, register, pre_login, generate_otp, verify_otp, generate_otp_with_email, reset_password
+from core.views import login, register, pre_login, generate_otp, verify_otp, generate_otp_with_email, reset_password, change_password
 # from core.views import login, register, logout, generate_otp, verify_otp, GoogleLogin, reset_password
 from django.conf.urls.static import static
 from django.conf import settings
@@ -51,6 +51,7 @@ urlpatterns = [
                 path('verify/', verify_otp, name='verify_otp'),
             ])),
             path('reset_password/', reset_password, name='reset_password'),
+            path('change_password/', change_password, name='change_password'),
             # path('', include('dj_rest_auth.urls')),
         ])),
         
