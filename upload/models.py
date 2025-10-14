@@ -83,6 +83,8 @@ def upload_save_signal(sender, instance, created, *kargs, **kwargs):
                 process_import_timekeeping.delay(instance.id)
             elif instance.upload_type == 7:
                 process_import_contact.delay(instance.id)
+            elif instance.upload_type == 8:
+                process_import_customer.delay(instance.id)
         except Exception as e:
             print('Upload Exception', e)
             instance.status = 1
