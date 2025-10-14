@@ -35,7 +35,7 @@ def process_import_hr(import_id):
     total = 0
     COLS = ['join_date', 'actual_sign_date', 'full_name', 'employee_code', 'timekeeping_id', \
       'dob', 'pob', 'place_of_origin', 'gender','nationality', 'religion', 'ethnicity', 'educaional_level', \
-      'years_of_experience', 'highest_qualification', 'direct_manager', 'current_address', 'permanent_address', 'email', 'phone','phone_other']
+      'years_of_experience', 'highest_qualification', 'direct_manager', 'current_address', 'permanent_address', 'email', 'personal_email','phone']
 
     for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row, min_col=2, values_only=True):
         import_obj = {}

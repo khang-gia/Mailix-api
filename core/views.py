@@ -470,6 +470,16 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
       return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
+  @action(detail=False, methods=['post'], permission_classes=[])
+  def download(self, request, pk=None):
+    download = Download.objects.create(
+      query = json.dumps(request.data),
+      created_by = request.user,
+      export_type = 'hrm'
+    )
+
+    return Response({'detail': 'Download is in progress', 'id': download.id}, status=status.HTTP_200_OK)
+
 class TitleFilter(FilterSet):
     search = django_filters.CharFilter(method='elastic_search')
     class Meta:
@@ -628,6 +638,25 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
     return Response(CustomerSerializer(customer).data, status=status.HTTP_200_OK)
 
+  @action(detail=False, methods=['post'], permission_classes=[])
+  def contact_download(self, request, pk=None):
+    download = Download.objects.create(
+      query = json.dumps(request.data),
+      created_by = request.user,
+      export_type = 'contact'
+    )
+
+    return Response({'detail': 'Download is in progress', 'id': download.id}, status=status.HTTP_200_OK)
+
+  @action(detail=False, methods=['post'], permission_classes=[])
+  def download(self, request, pk=None):
+    download = Download.objects.create(
+      query = json.dumps(request.data),
+      created_by = request.user,
+      export_type = 'customer'
+    )
+
+    return Response({'detail': 'Download is in progress', 'id': download.id}, status=status.HTTP_200_OK)
 class WorkFilter(FilterSet):
   search = django_filters.CharFilter(method='elastic_search')
   assigned_to_person = django_filters.CharFilter(method='filter_assigned_to_person')
