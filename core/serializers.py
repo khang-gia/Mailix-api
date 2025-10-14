@@ -207,6 +207,11 @@ class CustomerAdditionalSerializer(serializers.ModelSerializer):
     class Meta:
         model = ContactAddtionalInfo
         exclude = ['customer',]
+        
+class CustomerImportSerializer(serializers.ModelSerializer):
+    class Meta:
+          model = Customer
+          fields = '__all__'
 
 class CustomerSerializer(serializers.ModelSerializer):
     additional_infos = CustomerAdditionalSerializer(many=True, required=False)
