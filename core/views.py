@@ -21,6 +21,8 @@ from core.utils_feature import otp
 from core.utils_feature.mail import send_otp, send_forget_password_otp, send_password_on_create_user
 from rest_framework.views import APIView
 import secrets
+import io
+from core.xlsx import ExportXlsx
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
 from system.models import TrustedDevice
@@ -28,6 +30,8 @@ from django.utils import timezone
 from core.utils import generate_secure_password
 from system.miab import add_mail_user
 from django.db import transaction
+from django.http import HttpResponse
+
 def update_profile(request):
     data = request.data
     user_serializer = UserSerializer(request.user, data = data)
@@ -469,6 +473,75 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
     except Exception as e:
       return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+  @action(detail=False, methods=['get'])
+  def export_profile_hrs(self, request, pk=None):
+    qs = self.get_queryset()
+    qs = self.filter_queryset(qs)
+    is_user = request.user.profile_hr.role == 'U'
+
+    HEADERS = ['No.','NGÀY VÀO', 'NGÀY KÝ HỢP ĐỒNG LAO ĐỘNG CHÍNH THỨC', 'HỌ VÀ TÊN', 'MÃ NHÂN SỰ', \
+      'MÃ CHẤM CÔNG', ' NGÀY SINH ', 'NƠI SINH', 'NGUYÊN QUÁN', 'GIỚI TÍNH', 'QUỐC TỊCH', 'TÔN GIÁO','DÂN TỘC','TRÌNH ĐỘ PHỔ THÔNG', 'SÔ NĂM KINH NGHIỆM',' TRÌNH ĐỘ HỌC VẤN CAO NHẤT','NGƯỜI QUẢN LÝ TRỰC TIẾP', \
+      'NƠI Ở HIỆN TẠI', 'ĐỊA CHỈ THƯỜNG TRÚ', 'EMAIL', 'EMAIL CÁ NHÂN',' SỐ ĐIỆN THOẠI']
+    # if not is_user:
+    #     HEADERS += ['ID_NUMBER', 'GENDER', 'BIRTH_DATE_APPLICANT', 'ADDRESS_CURRENT', 'MOBILE_NUMBER', \
+    #     'REF1_NUMBER', 'REF2_NUMBER']
+    HEADERS += ['PHÒNG BAN','LOẠI LAO ĐỘNG','TRẠNG THÁI']
+
+    SHEET_NAME = 'HỒ SƠ NHÂN SỰ'
+    output = io.BytesIO()
+    xlsx = ExportXlsx(output, SHEET_NAME)
+    xlsx.add_header(HEADERS)
+
+    PROFILE_STATUSES = (
+      (0, 'Working'),
+      (1, 'Temporary absent'),
+      (2, 'Resigned'),
+      (3, 'Providing service'),
+      (4, 'Pending for recruitment'),
+    )
+    EDUCATION_LEVEL_CHOICES = (
+      (1, "1/12"),
+      (2, "2/12"),
+      (3, "3/12"),
+      (4, "4/12"),
+      (5, "5/12"),
+      (6, "6/12"),
+      (7, "7/12"),
+      (8, "8/12"),
+      (9, "9/12"),
+      (10, "10/12"),
+      (11, "11/12"),
+      (12, "12/12"),
+    )
+    for x, obj in enumerate(qs):
+      direct_manager = ''
+      department= ''
+      if obj.direct_manager:
+        direct_manager = obj.direct_manager.username
+      if obj.department:
+        department = obj.department.name
+      educaional_level = ''
+      if obj.educaional_level:
+        educaional_level = ([x for x in EDUCATION_LEVEL_CHOICES if x[0] == obj.educaional_level][0][1])
+      data = [x+1, obj.join_date, obj.actual_sign_date, obj.full_name, obj.employee_code, \
+        obj.timekeeping_id, obj.dob, obj.pob, obj.place_of_origin, obj.gender, obj.nationality, obj.religion,\
+        obj.ethnicity, educaional_level, obj.years_of_experience, obj.highest_qualification, direct_manager,\
+        obj.current_address, obj.permanent_address, obj.email, obj.personal_email, obj.phone, department, obj.type_of_labor]
+      
+      data.append([x for x in PROFILE_STATUSES if x[0] == obj.status][0][1])
+
+      xlsx.add_row(data)
+
+    xlsx.close()
+    output.seek(0)
+
+    response = HttpResponse(
+      output,
+      content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="HR_Export.xlsx"'
+    return response
 
   @action(detail=False, methods=['post'], permission_classes=[])
   def download(self, request, pk=None):
