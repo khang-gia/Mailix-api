@@ -792,77 +792,77 @@ class CustomerViewSet(viewsets.ModelViewSet):
     return response
 
 
-    @action(detail=False, methods=['get'])
-    def export_customers(self, request, pk=None):
-      qs = self.get_queryset()
-      qs = self.filter_queryset(qs)
-      is_user = request.user.profile_hr.role == 'U'
+  @action(detail=False, methods=['get'])
+  def export_customers(self, request, pk=None):
+    qs = self.get_queryset()
+    qs = self.filter_queryset(qs)
+    is_user = request.user.profile_hr.role == 'U'
 
-      HEADERS = ['No.','HỌ VÀ TÊN', 'MÃ KHÁCH HÀNG', 'DANH XƯNG', 'NGÀY SINH', \
-        'GIỚI TÍNH', 'NGƯỜI PHỤ TRÁCH', 'ĐỊA CHỈ', 'EMAIL', 'ĐIỆN THOẠI', 'MÃ SỐ THUẾ', 'LOẠI KHÁCH HÀNG','NGUỒN KHÁCH HÀNG','NHÓM KHÁCH HÀNG','TÊN CÔNG TY', 'SỐ ĐIỆN THOẠI CÔNG TY','EMAIL CÔNG TY','ĐỊA CHỈ CÔNG TY', \
-        'MÃ SỐ THUẾ CÔNG TY']
+    HEADERS = ['No.','HỌ VÀ TÊN', 'MÃ KHÁCH HÀNG', 'DANH XƯNG', 'NGÀY SINH', \
+      'GIỚI TÍNH', 'NGƯỜI PHỤ TRÁCH', 'ĐỊA CHỈ', 'EMAIL', 'ĐIỆN THOẠI', 'MÃ SỐ THUẾ', 'LOẠI KHÁCH HÀNG','NGUỒN KHÁCH HÀNG','NHÓM KHÁCH HÀNG','TÊN CÔNG TY', 'SỐ ĐIỆN THOẠI CÔNG TY','EMAIL CÔNG TY','ĐỊA CHỈ CÔNG TY', \
+      'MÃ SỐ THUẾ CÔNG TY']
 
-      SHEET_NAME = 'DANH SÁCH KHÁCH HÀNG'
-      output = io.BytesIO()
-      xlsx = ExportXlsx(output, SHEET_NAME)
-      xlsx.add_header(HEADERS)
+    SHEET_NAME = 'DANH SÁCH KHÁCH HÀNG'
+    output = io.BytesIO()
+    xlsx = ExportXlsx(output, SHEET_NAME)
+    xlsx.add_header(HEADERS)
 
-      CUSTOMER_TYPES = (
-        (1, 'Cá nhân'),
-        (2, 'Tổ chức'),
-      )
-      CUSTOMER_GROUPS = (
-        (1, 'Khánh hàng trung thành'),
-        (2, 'Khách hàng cũ'),
-        (3, 'Khách hàng tiềm năng'),
-        (4, 'Khách vãng lai'),
-        (5, 'Khách hàng tiềm năng mới'),
-        (6, 'Khách hàng đang chăm sóc'),
-        (7, 'VIP'),
-        (8, 'VVIP')
-      )
-      CUSTOMER_SOURCES = (
-        (1, 'Facebook'),
-        (2, 'Instagram'),
-        (3, 'Google'),
-        (4, 'Khách cũ giới thiệu'),
-        (5, 'Website'),
-        (6, 'Tự tìm kiếm'),
-        (7, 'Tổng đài'),
-        (8, 'Môi giới'),
-        (9, 'Dữ liệu bán hàng')
-      )
-      for x, obj in enumerate(qs):
-        curators = ''
-        type_of_customer = ''
-        cusomter_group = ''
-        customer_source = ''
-        if obj.curators.exists():
-          curators = ', '.join([user.username for user in obj.curators.all()])
-        if obj.type_of_customer:
-          type_of_customer = ([x for x in CUSTOMER_TYPES if x[0] == obj.type_of_customer][0][1])
-        if obj.customer_source:
-          customer_source = ([x for x in CUSTOMER_SOURCES if x[0] == obj.customer_source][0][1])
-        if obj.cusomter_group:
-          cusomter_group = ([x for x in CUSTOMER_GROUPS if x[0] == obj.cusomter_group][0][1])
-        data = [x+1, obj.name, obj.customer_code, obj.title, obj.dob, \
-          obj.gender, curators, obj.address, obj.email, obj.phone, obj.tax_code, type_of_customer,\
-          customer_source, cusomter_group, company_name, obj.company_phone, obj.company_email, company_address,\
-          obj.company_tax_code]
-        
-        # data.append([x for x in PROFILE_STATUSES if x[0] == obj.status][0][1])
+    CUSTOMER_TYPES = (
+      (1, 'Cá nhân'),
+      (2, 'Tổ chức'),
+    )
+    CUSTOMER_GROUPS = (
+      (1, 'Khánh hàng trung thành'),
+      (2, 'Khách hàng cũ'),
+      (3, 'Khách hàng tiềm năng'),
+      (4, 'Khách vãng lai'),
+      (5, 'Khách hàng tiềm năng mới'),
+      (6, 'Khách hàng đang chăm sóc'),
+      (7, 'VIP'),
+      (8, 'VVIP')
+    )
+    CUSTOMER_SOURCES = (
+      (1, 'Facebook'),
+      (2, 'Instagram'),
+      (3, 'Google'),
+      (4, 'Khách cũ giới thiệu'),
+      (5, 'Website'),
+      (6, 'Tự tìm kiếm'),
+      (7, 'Tổng đài'),
+      (8, 'Môi giới'),
+      (9, 'Dữ liệu bán hàng')
+    )
+    for x, obj in enumerate(qs):
+      curators = ''
+      type_of_customer = ''
+      cusomter_group = ''
+      customer_source = ''
+      if obj.curators.exists():
+        curators = ', '.join([user.username for user in obj.curators.all()])
+      if obj.type_of_customer:
+        type_of_customer = ([x for x in CUSTOMER_TYPES if x[0] == obj.type_of_customer][0][1])
+      if obj.customer_source:
+        customer_source = ([x for x in CUSTOMER_SOURCES if x[0] == obj.customer_source][0][1])
+      if obj.cusomter_group:
+        cusomter_group = ([x for x in CUSTOMER_GROUPS if x[0] == obj.cusomter_group][0][1])
+      data = [x+1, obj.name, obj.customer_code, obj.title, obj.dob, \
+        obj.gender, curators, obj.address, obj.email, obj.phone, obj.tax_code, type_of_customer,\
+        customer_source, cusomter_group, company_name, obj.company_phone, obj.company_email, company_address,\
+        obj.company_tax_code]
+      
+      # data.append([x for x in PROFILE_STATUSES if x[0] == obj.status][0][1])
 
-        xlsx.add_row(data)
+      xlsx.add_row(data)
 
-      xlsx.close()
-      output.seek(0)
+    xlsx.close()
+    output.seek(0)
 
-      response = HttpResponse(
-        output,
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      )
-      response['Content-Disposition'] = 'attachment; filename="Customers_Export.xlsx"'
-      return response
+    response = HttpResponse(
+      output,
+      content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="Customers_Export.xlsx"'
+    return response
 class WorkFilter(FilterSet):
   search = django_filters.CharFilter(method='elastic_search')
   assigned_to_person = django_filters.CharFilter(method='filter_assigned_to_person')

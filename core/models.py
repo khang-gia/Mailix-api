@@ -519,7 +519,7 @@ TITLES = (
 
 class Customer(BaseCreateUpdateModel):
     name = models.CharField("Name", max_length=200, db_index=True)
-    customer_code = models.CharField("Customer Code", max_length=100, unique=True, null=True, blank=True, db_index=True)
+    customer_code = models.CharField("Customer Code", max_length=100, null=True, blank=True, db_index=True)
     email = models.EmailField("Email", null=True, blank=True, db_index=True)
     phone = models.CharField("Phone", max_length=20, null=True, blank=True, db_index=True)
     address = models.CharField("Address", max_length=200, null=True, blank=True, db_index=True)
@@ -547,6 +547,8 @@ class Customer(BaseCreateUpdateModel):
     title = models.CharField("Title", max_length=15,  null=True, blank=True, db_index=True)
     history = HistoricalRecords()
 
+    class Meta:
+      unique_together = ('customer_code', 'stage')
     def __str__(self):
         return self.name
 

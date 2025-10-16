@@ -97,7 +97,7 @@ def process_import_contact(import_id):
         'khách hàng tiềm năng':3,
         'khách hàng vãng lai': 4,
         'khách hàng tiềm năng mới': 5,
-        'khách hàng đang chăm sóc:': 6,
+        'khách hàng đang chăm sóc': 6,
         'vip': 7,
         'vvip':8
     }
@@ -156,12 +156,11 @@ def process_import_contact(import_id):
                     import_obj['curators'] = curator_objs
                 else:
                     import_obj['curators'] = []
-                if import_obj['type_of_customer']:
-                    import_obj['type_of_customer'] = mapping_type.get(import_obj['type_of_customer'].strip().lower(), None)
-                if import_obj['customer_source']:
-                    import_obj['customer_source'] = mapping_source.get(import_obj['customer_source'].strip().lower(),None)
+                import_obj['type_of_customer'] = mapping_type.get(import_obj['type_of_customer'].strip().lower(), None)
+                import_obj['customer_source'] = mapping_source.get(import_obj['customer_source'].strip().lower(),None)
+                import_obj['stage'] = 1
                 try:
-                    customer = Customer.objects.get(customer_code=import_obj['customer_code'])
+                    customer = Customer.objects.get(customer_code=import_obj['customer_code'],stage=1)
                     serializer = CustomerImportSerializer(customer, data=import_obj)
                 except Customer.DoesNotExist:
                     serializer = CustomerImportSerializer(data=import_obj)
@@ -169,6 +168,7 @@ def process_import_contact(import_id):
                     print(e)
                     failure += 1
                 if serializer and serializer.is_valid():
+                    print('serializer valid')
                     customer = serializer.save()
                     success += 1
                 else:
@@ -204,7 +204,7 @@ def process_import_customer(import_id):
         'khách hàng tiềm năng':3,
         'khách hàng vãng lai': 4,
         'khách hàng tiềm năng mới': 5,
-        'khách hàng đang chăm sóc:': 6,
+        'khách hàng đang chăm sóc': 6,
         'vip': 7,
         'vvip':8
     }
@@ -263,15 +263,13 @@ def process_import_customer(import_id):
                     import_obj['curators'] = curator_objs
                 else:
                     import_obj['curators'] = []
-                if import_obj['type_of_customer']:
-                    import_obj['type_of_customer'] = mapping_type.get(import_obj['type_of_customer'].strip().lower(), None)
-                elif import_obj['customer_source']:
-                    import_obj['customer_source'] = mapping_source.get(import_obj['customer_source'].strip().lower(),None)
-                elif import_obj['customer_group']:
-                    import_obj['customer_group'] = mapping_group.get(import_obj['customer_group'].strip().lower(),None)
+                import_obj['type_of_customer'] = mapping_type.get(import_obj['type_of_customer'].strip().lower(), None)
+                import_obj['customer_source'] = mapping_source.get(import_obj['customer_source'].strip().lower(),None)
+                import_obj['customer_group'] = mapping_group.get(import_obj['customer_group'].strip().lower(),None)
                 import_obj['stage'] = 2
                 try:
-                    customer = Customer.objects.get(customer_code=import_obj['customer_code'])
+                    print('import_obj', import_obj)
+                    customer = Customer.objects.get(customer_code=import_obj['customer_code'], stage=2)
                     serializer = CustomerImportSerializer(customer, data=import_obj)
                 except Customer.DoesNotExist:
                     serializer = CustomerImportSerializer(data=import_obj)

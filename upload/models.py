@@ -72,7 +72,7 @@ class Upload(models.Model):
 
 @receiver(signal=post_save, sender=Upload)
 def upload_save_signal(sender, instance, created, *kargs, **kwargs):
-    from upload.tasks import process_import_hr, process_import_timekeeping, process_import_contact
+    from upload.tasks import process_import_hr, process_import_timekeeping, process_import_contact, process_import_customer
     if created: # new
         instance.status = 3
         instance.save()
