@@ -28,7 +28,7 @@ from django.contrib.auth.hashers import make_password, check_password
 from system.models import TrustedDevice
 from django.utils import timezone
 from core.utils import generate_secure_password
-from system.miab import add_mail_user
+from system.miab import add_mail_user, set_mail_user_password
 from django.db import transaction
 from django.http import HttpResponse
 
@@ -79,6 +79,9 @@ def change_password(request, *args):
   profile_hr= user.profile_hr
   profile_hr.is_first_login = False
   profile_hr.save()
+  success, res = set_mail_user_password(profile_hr.email, new_password) # Set miab password also
+  if not success:
+    raise Exception('Cannot create email account on Mail-in-a-Box server.')
   user_serializer = UserSerializer(user)
   return Response(user_serializer.data, status=status.HTTP_200_OK)
 

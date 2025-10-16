@@ -94,3 +94,10 @@ def add_mail_user(email, password):
         "privileges": ""
     }
     return post_data("/admin/mail/users/add", data)
+
+def set_mail_user_password(email, password):
+    data = {
+        "email": email,
+        "password": password,
+    }
+    return post_data("/admin/mail/users/password", data)
