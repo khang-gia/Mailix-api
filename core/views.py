@@ -468,6 +468,7 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
           raise Exception('Cannot create email account on Mail-in-a-Box server.')
         profile_hr.user = user
         profile_hr.email = authen_email
+        profile_hr.is_first_login = True
         profile_hr.save()
         transaction.on_commit(lambda: send_password_on_create_user(authen_email, email, username, password))
     except Exception as e:
