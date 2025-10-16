@@ -2,8 +2,8 @@
 from celery import shared_task
 from download.models import Download
 from download.tasks.hr import hr_download
-from download.tasks.contact import contact_download
-from download.tasks.customer import customer_download
+# from download.tasks.contact import contact_download
+# from download.tasks.customer import customer_download
 import logging
 logger = logging.getLogger('background')
 
@@ -24,9 +24,9 @@ def process_download(id, force=False):
 
     if download.export_type == 'hrm':        
         hr_download(download)
-    elif download.export_type == 'contact':
-        contact_download(download)
-    elif download.export_type == 'customer':
-        customer_download(download)
+    # elif download.export_type == 'contact':
+    #     contact_download(download)
+    # elif download.export_type == 'customer':
+    #     customer_download(download)
     else:
         logger.error('Error: report type {} is not valid.'.format(download.export_type))
