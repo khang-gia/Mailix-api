@@ -316,6 +316,11 @@ class ScheduleEventDetailSerializer(serializers.ModelSerializer):
         model = ScheduleEvent
         fields = '__all__'
 
+class WorkImportSerializer(serializers.ModelSerializer):
+    class Meta:
+      model = Works
+      fields = '__all__'
+
 class WorkSerializer(serializers.ModelSerializer):
     schedule = ScheduleEventSerializer(required=False, allow_null=True)
     class Meta:

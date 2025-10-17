@@ -7,7 +7,7 @@ from celery import shared_task
 from django.db.models import Sum
 from django.conf import settings
 from upload.models import Upload
-from core.serializers import ProfileHRSerializer, CustomerImportSerializer
+from core.serializers import ProfileHRSerializer, CustomerImportSerializer,WorkImportSerializer
 from django.db import transaction, DatabaseError
 
 @shared_task
@@ -285,7 +285,128 @@ def process_import_customer(import_id):
                     failure += 1
         except Exception as e:
             failure += 1
-            logger.error('Upload contact has exception error:', e)
+            logger.error('Upload customer has exception error:', e)
+
+    obj.success = success
+    obj.failure = failure
+    obj.total = total
+    obj.status = 1
+    obj.save()
+    # logger.info('Import {} has total {} update'.format(import_id, total_updated))
+    wb.close()
+
+
+@shared_task
+def process_import_work(import_id):
+    print('===================== Process Upload Work: {}'.format(import_id))
+    from core.models import ProfileHR, Works
+    from django.contrib.auth.models import User
+    logger = logging.getLogger('upload')
+    logger.info('===================== Process Upload: {}'.format(import_id))
+    obj = Upload.objects.filter(id=import_id).first()
+    if not obj:
+        logger.error('Upload {} Not found'.format(import_id))
+        return False
+    mapping_priority = {
+        'thấp': 1,
+        'trung bình': 2,
+        'cao':3,
+        'khấn cấp': 4,
+        'nghiêm trọng': 5,
+        'không': 6
+    }
+    mapping_status = {
+        'chưa bắt đầu': 1,
+        'đang tiến hành': 2,
+        'hoàn thành': 3,
+        'tạm dừng': 4,
+        'đã huỷ': 5,
+        'hoãn lại':6,
+        'chờ duyệt': 7,
+        'đã phê duyệt': 8,
+        'bị từ chói': 9,
+        'chờ': 10,
+        'thất bại': 11,
+        'thành công':12,
+        'lưu trữ': 13,
+        'đã xoá': 14,
+        'bản nháp': 15
+    }
+    if not os.path.isfile(obj.file.path):
+        logger.error('Upload {} has no file : {}'.format(import_id, obj.file.path))
+        obj.status = 1
+        obj.save()
+        return False
+
+    wb = openpyxl.load_workbook(obj.file.path, data_only=True, read_only = True, keep_vba = False)
+    sheet = wb.worksheets[0]
+    success = 0
+    failure = 0
+    total = 0
+    COLS = ['name', 'code', 'description','status', 'assigned_to', 'assigned_by', \
+      'managers', 'start_date', 'actual_start_date', 'end_date','priority']
+    for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row, max_col=len(COLS) + 1, values_only=True):
+        if not any(row):  # skip empty rows
+            break
+        import_obj = {}
+        row = row[1:]
+        for j in range(0, len(COLS)):
+            value = row[j]
+            import_obj[COLS[j]] = None
+            if not value or value=='':
+                continue
+            if isinstance(value, str):
+                value = value.strip()
+            import_obj[COLS[j]] = value
+            if isinstance(value, datetime):
+                import_obj[COLS[j]] = value.date()
+        total += 1    
+        serializer = None
+        try: 
+            with transaction.atomic():
+                if import_obj['assigned_to']:
+                    _names = [n.strip() for n in import_obj['curators'].split(",") if n.strip()]
+                    _objs = []
+                    _objs = list(User.objects.filter(username__in=_names).values_list('id', flat=True))
+                    import_obj['assigned_to'] = _objs
+                else:
+                    import_obj['assigned_to'] = []
+                if import_obj['assigned_by']:
+                    _names = [n.strip() for n in import_obj['curators'].split(",") if n.strip()]
+                    _objs = []
+                    _objs = list(User.objects.filter(username__in=_names).values_list('id', flat=True))
+                    import_obj['assigned_by'] = _objs
+                else:
+                    import_obj['assigned_by'] = []
+                if import_obj['managers']:
+                    _names = [n.strip() for n in import_obj['curators'].split(",") if n.strip()]
+                    _objs = []
+                    _objs = list(User.objects.filter(username__in=_names).values_list('id', flat=True))
+                    import_obj['managers'] = _objs
+                else:
+                    import_obj['managers'] = []
+                import_obj['priority'] = mapping_priority.get(import_obj['priority'].strip().lower(),None)
+                import_obj['status'] = mapping_status.get(import_obj['status'].strip().lower(),None)
+
+                try:
+                    print('import_obj', import_obj)
+                    work = Works.objects.get(code=import_obj['code'])
+                    serializer = WorkImportSerializer(work, data=import_obj)
+                except Works.DoesNotExist:
+                    serializer = WorkImportSerializer(data=import_obj)
+                except Exception as e:
+                    print(e)
+                    failure += 1
+                if serializer and serializer.is_valid():
+                    work = serializer.save()
+                    success += 1
+                else:
+                    if serializer:
+                        print(serializer.errors)
+                    failure += 1
+        except Exception as e:
+            failure += 1
+            logger.error('Upload work has exception error:', e)
 
     obj.success = success
     obj.failure = failure
