@@ -358,28 +358,28 @@ def process_import_work(import_id):
             if isinstance(value, str):
                 value = value.strip()
             import_obj[COLS[j]] = value
-            if isinstance(value, datetime):
+            if isinstance(value, datetime) and COLS[j] not in ['start_date', 'actual_start_date', 'end_date']:
                 import_obj[COLS[j]] = value.date()
         total += 1    
         serializer = None
         try: 
             with transaction.atomic():
                 if import_obj['assigned_to']:
-                    _names = [n.strip() for n in import_obj['curators'].split(",") if n.strip()]
+                    _names = [n.strip() for n in import_obj['assigned_to'].split(",") if n.strip()]
                     _objs = []
                     _objs = list(User.objects.filter(username__in=_names).values_list('id', flat=True))
                     import_obj['assigned_to'] = _objs
                 else:
                     import_obj['assigned_to'] = []
                 if import_obj['assigned_by']:
-                    _names = [n.strip() for n in import_obj['curators'].split(",") if n.strip()]
+                    _names = [n.strip() for n in import_obj['assigned_by'].split(",") if n.strip()]
                     _objs = []
                     _objs = list(User.objects.filter(username__in=_names).values_list('id', flat=True))
                     import_obj['assigned_by'] = _objs
                 else:
                     import_obj['assigned_by'] = []
                 if import_obj['managers']:
-                    _names = [n.strip() for n in import_obj['curators'].split(",") if n.strip()]
+                    _names = [n.strip() for n in import_obj['managers'].split(",") if n.strip()]
                     _objs = []
                     _objs = list(User.objects.filter(username__in=_names).values_list('id', flat=True))
                     import_obj['managers'] = _objs

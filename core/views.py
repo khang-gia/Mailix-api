@@ -985,3 +985,77 @@ class WorkViewSet(viewsets.ModelViewSet):
       except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(status=status.HTTP_200_OK)
+
+  @action(detail=False, methods=['get'])
+  def export_work_list(self, request, pk=None):
+    qs = self.get_queryset()
+    qs = self.filter_queryset(qs)
+    is_user = request.user.profile_hr.role == 'U'
+
+    HEADERS = ['No.','TÊN CÔNG VIỆC', 'MÃ CÔNG VIỆC', 'MÔ TẢ', 'TRẠNG THÁI', \
+      'NGƯỜI THỰC HIỆN', 'NGƯỜI GIAO', 'NGƯỜI QUẢN LÝ', 'NGÀY BẮT ĐẦU', 'NGÀY BẮT ĐÀU THỰC TẾ', 'NGÀY KẾT THÚC', 'ĐỘ ƯU TIÊN']
+
+    SHEET_NAME = 'DANH SÁCH CÔNG VIỆC'
+    output = io.BytesIO()
+    xlsx = ExportXlsx(output, SHEET_NAME)
+    xlsx.add_header(HEADERS)
+
+    PRIORITY_CHOICES = (
+      (1, 'Low'),
+      (2, 'Medium'),
+      (3, 'High'),
+      (4, 'Urgent'),
+      (5, 'Critical'),
+      (6, 'None'),
+    )
+    STATUSES = (
+      (1, 'Not Started'),
+      (2, 'In Progress'),
+      (3, 'Completed'),
+      (4, 'On Hold'),
+      (5, 'Cancelled'),
+      (6, 'Deferred'),
+      (7, 'Waiting for Review'),
+      (8, 'Approved'),
+      (9, 'Rejected'),
+      (10, 'Pending'),
+      (11, 'Failed'),
+      (12, 'Success'),
+      (13, 'Archived'),
+      (14, 'Deleted'),
+      (15, 'Draft'),
+    )
+    for x, obj in enumerate(qs):
+      assigned_tos = ''
+      assigned_bys = ''
+      managers = ''
+      priority = ''
+      status = ''
+      customer_source = ''
+      if obj.assigned_to.exists():
+        assigned_tos = ', '.join([user.username for user in obj.assigned_to.all()])
+      if obj.assigned_by.exists():
+        assigned_bys = ', '.join([user.username for user in obj.assigned_by.all()])
+      if obj.managers.exists():
+        managers = ', '.join([user.username for user in obj.manager.all()])
+      if obj.priority:
+        priority = ([x for x in PRIORITY_CHOICES if x[0] == obj.priority][0][1])
+      if obj.status:
+        status = ([x for x in STATUSES if x[0] == obj.status][0][1])
+      
+      data = [x+1, obj.name, obj.code, obj.description, status,  assigned_tos, assigned_bys, \
+      managers, obj.start_date.replace(tzinfo=None), obj.actual_start_date.replace(tzinfo=None), obj.end_date.replace(tzinfo=None), priority]
+      
+      # data.append([x for x in PROFILE_STATUSES if x[0] == obj.status][0][1])
+
+      xlsx.add_row(data)
+
+    xlsx.close()
+    output.seek(0)
+
+    response = HttpResponse(
+      output,
+      content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="Works_Export.xlsx"'
+    return response
