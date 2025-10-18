@@ -839,7 +839,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
     for x, obj in enumerate(qs):
       curators = ''
       type_of_customer = ''
-      cusomter_group = ''
+      customer_group = ''
       customer_source = ''
       if obj.curators.exists():
         curators = ', '.join([user.username for user in obj.curators.all()])
@@ -847,11 +847,11 @@ class CustomerViewSet(viewsets.ModelViewSet):
         type_of_customer = ([x for x in CUSTOMER_TYPES if x[0] == obj.type_of_customer][0][1])
       if obj.customer_source:
         customer_source = ([x for x in CUSTOMER_SOURCES if x[0] == obj.customer_source][0][1])
-      if obj.cusomter_group:
-        cusomter_group = ([x for x in CUSTOMER_GROUPS if x[0] == obj.cusomter_group][0][1])
+      if obj.customer_group:
+        customer_group = ([x for x in CUSTOMER_GROUPS if x[0] == obj.customer_group][0][1])
       data = [x+1, obj.name, obj.customer_code, obj.title, obj.dob, \
         obj.gender, curators, obj.address, obj.email, obj.phone, obj.tax_code, type_of_customer,\
-        customer_source, cusomter_group, company_name, obj.company_phone, obj.company_email, company_address,\
+        customer_source, customer_group, company_name, obj.company_phone, obj.company_email, company_address,\
         obj.company_tax_code]
       
       # data.append([x for x in PROFILE_STATUSES if x[0] == obj.status][0][1])
