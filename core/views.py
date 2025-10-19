@@ -1042,9 +1042,11 @@ class WorkViewSet(viewsets.ModelViewSet):
         priority = ([x for x in PRIORITY_CHOICES if x[0] == obj.priority][0][1])
       if obj.status:
         status = ([x for x in STATUSES if x[0] == obj.status][0][1])
-      
+      start_date = obj.start_date.replace(tzinfo=None) if obj.start_date else ''
+      actual_start_date = obj.actual_start_date.replace(tzinfo=None) if obj.actual_start_date else ''
+      end_date  = obj.end_date.replace(tzinfo=None) if obj.end_date else ''
       data = [x+1, obj.name, obj.code, obj.description, status,  assigned_tos, assigned_bys, \
-      managers, obj.start_date.replace(tzinfo=None), obj.actual_start_date.replace(tzinfo=None), obj.end_date.replace(tzinfo=None), priority]
+      managers, start_date, actual_start_date, end_date, priority]
       
       # data.append([x for x in PROFILE_STATUSES if x[0] == obj.status][0][1])
 
