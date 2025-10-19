@@ -1037,7 +1037,7 @@ class WorkViewSet(viewsets.ModelViewSet):
       if obj.assigned_by.exists():
         assigned_bys = ', '.join([user.username for user in obj.assigned_by.all()])
       if obj.managers.exists():
-        managers = ', '.join([user.username for user in obj.manager.all()])
+        managers = ', '.join([user.username for user in obj.managers.all()])
       if obj.priority:
         priority = ([x for x in PRIORITY_CHOICES if x[0] == obj.priority][0][1])
       if obj.status:
