@@ -851,7 +851,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
         customer_group = ([x for x in CUSTOMER_GROUPS if x[0] == obj.customer_group][0][1])
       data = [x+1, obj.name, obj.customer_code, obj.title, obj.dob, \
         obj.gender, curators, obj.address, obj.email, obj.phone, obj.tax_code, type_of_customer,\
-        customer_source, customer_group, obj.company_name, obj.company_phone, obj.company_email, company_address,\
+        customer_source, customer_group, obj.company_name, obj.company_phone, obj.company_email, obj.company_address,\
         obj.company_tax_code]
       
       # data.append([x for x in PROFILE_STATUSES if x[0] == obj.status][0][1])
