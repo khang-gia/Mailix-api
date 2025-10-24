@@ -69,10 +69,22 @@ def send_to_admins(template_url, subject, context):
 @shared_task
 def send_mail_in_background(to_emails, template_url, subject, context):
     print('[Celery] send_mail_in_background {}'.format(to_emails))
-    return send_mail(
-        subject = subject,
-        message = '',
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=to_emails,
-        html_message=render_to_string(template_url, context),
-    )
+    try:
+        return send_mail(
+            subject = subject,
+            message = '',
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=to_emails,
+            html_message=render_to_string(template_url, context),
+            fail_silently=False
+        )
+    except Exception as e:
+        logger.error(f'Error sending mail to {to_emails}: {e}')
+        raise
+    # return send_mail(
+    #     subject = subject,
+    #     message = '',
+    #     from_email=settings.DEFAULT_FROM_EMAIL,
+    #     recipient_list=to_emails,
+    #     html_message=render_to_string(template_url, context),
+    # )
