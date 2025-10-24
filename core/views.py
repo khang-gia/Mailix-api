@@ -81,7 +81,7 @@ def change_password(request, *args):
   profile_hr.save()
   success, res = set_mail_user_password(profile_hr.email, new_password) # Set miab password also
   if not success:
-    raise Exception('Cannot create email account on Mail-in-a-Box server.')
+    raise Exception('Cannot change email account password on Mail-in-a-Box server.')
   user_serializer = UserSerializer(user)
   return Response(user_serializer.data, status=status.HTTP_200_OK)
 
@@ -470,7 +470,8 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
         if not success:
           raise Exception('Cannot create email account on Mail-in-a-Box server.')
         profile_hr.user = user
-        profile_hr.email = authen_email
+        profile_hr.personal_email = authen_email
+        profile_hr.email = email
         profile_hr.is_first_login = True
         profile_hr.save()
         transaction.on_commit(lambda: send_password_on_create_user(authen_email, email, username, password))
