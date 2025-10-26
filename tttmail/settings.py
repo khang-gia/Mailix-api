@@ -227,6 +227,14 @@ LOGGING = {
             'backupCount': 7,
             'formatter': 'app'
         },
+        'upload': { # log for mail-in-a-box integration
+            'level': 'INFO',
+            'filename': BASE_DIR / 'logs/upload.log',
+            'class':'logging.handlers.RotatingFileHandler',
+            'maxBytes' : 1024*1024*20, # 50MB
+            'backupCount': 7,
+            'formatter': 'app'
+        },
 
     },
     'loggers': {
@@ -255,6 +263,11 @@ LOGGING = {
             "handlers": ["miab"],
             "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
             "propagate": False,
+        },
+        'upload': {
+            'handlers': ['upload'],
+            'level': 'INFO',
+            'propagate': False
         },
     },
 }
