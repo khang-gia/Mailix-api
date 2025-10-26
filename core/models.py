@@ -259,7 +259,7 @@ ACCOUNT_STATUSES = (
 )
 class ProfileHR(BaseCreateUpdateModel):
     full_name = models.CharField("Full Name", max_length=200, db_index=True)
-    user = models.OneToOneField("auth.User", on_delete=models.SET_NULL, related_name='profile_hr', db_index=True, null=True, blank=True)
+    user = models.OneToOneField("auth.User", on_delete=models.SET_NULL, related_name='profile_hr', db_index=True, null=True, blank=True, unique=True)
     avatar = models.ImageField("Avatar", upload_to='avatars', null=True, blank=True)
     department = models.ForeignKey("system.Department", on_delete=models.SET_NULL, related_name="profile_hr", null=True, blank=True)
     employee_code = models.CharField("Employee Code", max_length=50)
@@ -315,6 +315,7 @@ class ProfileHR(BaseCreateUpdateModel):
     status = models.IntegerField('Status', choices=PROFILE_STATUSES, default=0, null=True, blank=True, db_index=True)
     group = models.ForeignKey('system.SystemGroup',  on_delete=models.SET_NULL, related_name="profile_hrs", null=True, blank=True)
     is_first_login = models.BooleanField('Is First Login', default=True)
+    is_demo_account = models.BooleanField('Is Demo Account', default=False)
     history = HistoricalRecords()
 
     def __str__(self):
