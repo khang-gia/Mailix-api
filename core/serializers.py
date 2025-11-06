@@ -3,6 +3,9 @@ from django.contrib.auth.models import User
 from .models import *
 from system.models import ScheduleEvent
 from system.serializers import DepartmentListSerializer
+import json
+from rest_framework.exceptions import ValidationError
+from django.db import transaction
 # class ProfileSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = Profile
@@ -206,24 +209,25 @@ class TitleListSerializer(serializers.ModelSerializer):
 class CustomerAdditionalSerializer(serializers.ModelSerializer):
     class Meta:
         model = ContactAddtionalInfo
-        exclude = ['customer',]
-        
+        fields = '__all__'        
 class CustomerImportSerializer(serializers.ModelSerializer):
     class Meta:
           model = Customer
           fields = '__all__'
 
 class CustomerSerializer(serializers.ModelSerializer):
-    additional_infos = CustomerAdditionalSerializer(many=True, required=False)
+    additional_infos_json = CustomerAdditionalSerializer(many=True, required=False)
+    additional_infos = serializers.CharField(required=False, allow_blank=True)
     class Meta:
         model = Customer
         fields = '__all__'
 
+    @transaction.atomic
     def create(self, validated_data):
       curators = validated_data.pop('curators', [])
       additional_infos = validated_data.pop('additional_infos', [])
       
-      type_of_customer = validated_data.pop('type_of_customer', None)
+      type_of_customer = validated_data.get('type_of_customer', None)
       if type_of_customer == 1:
         company_fields = [
         'company_name', 'company_address', 'company_phone',
@@ -231,17 +235,26 @@ class CustomerSerializer(serializers.ModelSerializer):
         ]
         for field in company_fields:
           validated_data[field] = None
-        
+      print('validated_data:', validated_data)
       customer = Customer.objects.create(**validated_data)
       customer.curators.set(curators)
+      # print('additional_infos:', additional_infos)
+      additional_infos = json.loads(additional_infos) if additional_infos else []
+      print('additional_infos:', additional_infos)
       if additional_infos:
         for info in additional_infos:
-          contact_additional_info = ContactAddtionalInfo.objects.create(customer=customer, **info)
+          info['customer'] = customer.id
+          print('info:', info)
+          additional_info_serializer = CustomerAdditionalSerializer(data=info)
+          if additional_info_serializer.is_valid(raise_exception=True):
+            additional_info_serializer.save()
+        
       return customer
 
+    @transaction.atomic
     def update(self, instance, validated_data):
       curators = validated_data.pop('curators', None)
-      type_of_customer = validated_data.pop('type_of_customer', None)
+      type_of_customer = validated_data.get('type_of_customer', None)
       additional_infos = validated_data.pop('additional_infos', [])
       
       if type_of_customer == 1:
@@ -256,10 +269,14 @@ class CustomerSerializer(serializers.ModelSerializer):
       if curators is not None:
         instance.curators.set(curators)
       instance.save()
+      additional_infos = json.loads(additional_infos) if additional_infos else []
       if additional_infos:
         instance.additional_infos.all().delete()
         for info in additional_infos:
-          ContactAddtionalInfo.objects.create(customer=instance, **info)
+          info['customer'] = instance.id
+          additional_info_serializer = CustomerAdditionalSerializer(data=info)
+          if additional_info_serializer.is_valid(raise_exception=True):
+            additional_info_serializer.save()
       return instance
 
 class CustomerListSerializer(serializers.ModelSerializer):
@@ -275,10 +292,25 @@ class CustomerListSerializer(serializers.ModelSerializer):
 class CustomerDetailSerializer(serializers.ModelSerializer):
     curators = UserListSerializer(read_only=True, many=True)
     additional_infos = CustomerAdditionalSerializer(many=True, read_only=True)
+    avatar = serializers.SerializerMethodField(read_only=True)
+    curators_list = UserOtherViewSerializer(read_only=True, many=True, source='curators')
+    customer_source_display = serializers.CharField(source='get_customer_source_display', read_only=True)
+    type_of_customer_display = serializers.CharField(source='get_type_of_customer_display', read_only=True)
+    line_of_business_display = serializers.CharField(source='get_line_of_business_display', read_only=True)
+    company_type_display = serializers.CharField(source='get_company_type_display', read_only=True)
     class Meta:
         model = Customer
         fields = '__all__'
 
+    def get_avatar(self, obj):
+      request = self.context.get('request')
+      if obj.avatar:
+        avatar_url = obj.avatar.url
+        if request is not None:
+          return request.build_absolute_uri(avatar_url)
+
+        return avatar_url
+      return None
 class ScheduleEventSerializer(serializers.ModelSerializer):
     class Meta:
         model = ScheduleEvent

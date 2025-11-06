@@ -165,3 +165,4 @@ local_settings.py
 media/
 dump.rdb
 .vscode
+.DS_Store

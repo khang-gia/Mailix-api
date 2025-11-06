@@ -520,6 +520,7 @@ TITLES = (
 
 class Customer(BaseCreateUpdateModel):
     name = models.CharField("Name", max_length=200, db_index=True)
+    avatar = models.ImageField("Avatar", upload_to='customer_avatars', null=True, blank=True)
     customer_code = models.CharField("Customer Code", max_length=100, null=True, blank=True, db_index=True)
     email = models.EmailField("Email", null=True, blank=True, db_index=True)
     phone = models.CharField("Phone", max_length=20, null=True, blank=True, db_index=True)
@@ -534,8 +535,8 @@ class Customer(BaseCreateUpdateModel):
     company_phone = models.CharField("Company Phone", max_length=20, null=True, blank=True, db_index=True)
     company_email = models.EmailField("Company Email", null=True, blank=True, db_index=True)
     company_tax_code = models.CharField("Company Tax Code", max_length=20, null=True, blank=True, db_index=True)
-    company_type = models.CharField("Company Type", max_length=20, null=True, blank=True, db_index=True)
-    line_of_business = models.CharField("Line of Business", max_length=20, null=True, blank=True, db_index=True)
+    company_type = models.CharField("Company Type", max_length=100, null=True, blank=True, db_index=True)
+    line_of_business = models.CharField("Line of Business", max_length=100, null=True, blank=True, db_index=True)
     curators = models.ManyToManyField(User, related_name='contacts', null=True, blank=True, db_index=True)
     type_of_customer = models.IntegerField("Type of customer", choices=CUSTOMER_TYPES, default=1, db_index=True)
     customer_group = models.IntegerField("Customer Group", choices=CUSTOMER_GROUPS, default=1, db_index=True)
@@ -552,6 +553,65 @@ class Customer(BaseCreateUpdateModel):
       unique_together = ('customer_code', 'stage')
     def __str__(self):
         return self.name
+
+def customer_attachment_path(instance, filename):
+    """
+    Generates the upload path for CustomerAttachment files using the unique customer code.
+    Format: '<customer_code>/customer_attachments/<filename>'
+    """
+    # Use the unique and immutable customer code
+    customer_code = instance.customer.code
+    
+    # Construct the final path
+    return os.path.join(
+        customer_code, 
+        'customer_attachments', 
+        filename
+    )
+def comment_attachment_path(instance, filename):
+    """
+    Saves Comment attachments under /<user_code>/comment_attachment/
+    """
+    customer_code = instance.customer.code
+    
+    return os.path.join(
+        customer_code, 
+        'comment_attachment', 
+        filename
+    )
+class CustomerAttachment(BaseCreateUpdateModel):
+    customer = models.ForeignKey(Customer,related_name='attachments', on_delete=models.CASCADE)
+    file = models.FileField(upload_to=customer_attachment_path)
+    filename = models.CharField(max_length=255, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.filename and self.file:
+            self.filename = self.file.name
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Attachment for Customer {self.customer.name}: {self.filename or 'No Name'}"
+
+class CustomerComment(BaseCreateUpdateModel):
+    customer = models.ForeignKey(Customer, related_name='comments', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    text = models.TextField()
+    def __str__(self):
+        return "Comment <{}> by {}".format(self.pk, self.user)
+
+class CustomerCommentAttachment(models.Model):
+    comment = models.ForeignKey(
+        'CustomerComment', related_name='attachments', on_delete=models.CASCADE
+    )
+    file = models.FileField(upload_to=comment_attachment_path)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    filename = models.CharField(max_length=255, blank=True, null=True)
+    def save(self, *args, **kwargs):
+        if not self.filename and self.file:
+            self.filename = self.file.name
+        super().save(*args, **kwargs)
+    def __str__(self):
+        return f"Attachment for Comment {self.comment.pk}: {self.filename or 'No Name'}"
 
 CONTACT_ADDITIONAL_INFO_TYPES = (
   (1, 'Email'),
