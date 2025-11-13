@@ -722,3 +722,30 @@ class WorkAttachment(BaseCreateUpdateModel):
 
     def __str__(self):
         return f"Attachment for Work {self.work.name}: {self.filename or 'No Name'}"
+
+class WorkComment(BaseCreateUpdateModel):
+    work = models.ForeignKey(Works, related_name='comments', on_delete=models.CASCADE, db_index=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    text = models.TextField()
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
+    likes = models.ManyToManyField(User, related_name='liked_comments', blank=True)
+    def like_count(self):
+        return self.likes.count()
+
+    def __str__(self):
+        return f"Comment <{self.pk}> by {self.user}"
+
+class WorkCommentAttachment(models.Model):
+    comment = models.ForeignKey(
+        'WorkComment', related_name='attachments', on_delete=models.CASCADE
+    )
+    file = models.FileField(upload_to='work_comment_attachments/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    filename = models.CharField(max_length=255, blank=True, null=True)
+    def save(self, *args, **kwargs):
+        if not self.filename and self.file:
+            self.filename = self.file.name
+        super().save(*args, **kwargs)
+    def __str__(self):
+        return f"Attachment for Comment {self.comment.pk}: {self.filename or 'No Name'}"
+

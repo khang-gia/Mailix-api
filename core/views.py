@@ -1,12 +1,13 @@
 from django.shortcuts import render
-from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR, Title, Customer, Works
+from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR, Title, Customer, Works, WorkComment
 # Create your views here.
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import UserSerializer, ProfileSerializer, LoginSerializer, SystemNotificationSerializer, FeedbackSerializer, HappeningEventSerializer, HotEventSerializer,\
   CredentialsSerializer, ProfileHRListSerializer, ProfileHRDetailSerializer, ProfileHRSerializer, UserListSerializer, TitleSerializer, TitleListSerializer, UsernameSerializer, \
-    OTPSerializer, CustomerSerializer, CustomerListSerializer, CustomerDetailSerializer, WorkSerializer, WorkListSerializer, WorkDetailSerializer, WorkHistorySerializer
+    OTPSerializer, CustomerSerializer, CustomerListSerializer, CustomerDetailSerializer, WorkSerializer, WorkListSerializer, WorkDetailSerializer, WorkHistorySerializer, \
+      WorkCommentSerializer, WorkCommentCreateSerializer
 from django_filters.rest_framework import FilterSet
 import django_filters
 from django.db.models import Q, Count
@@ -944,6 +945,7 @@ class WorkViewSet(viewsets.ModelViewSet):
   serializer_class = WorkSerializer
   filterset_class = WorkFilter
   ordering_fields = ['id']
+  permission_classes = [IsAuthenticated]
   ordering = ('-id',)
 
   def get_serializer_class(self):
@@ -1076,3 +1078,38 @@ class WorkViewSet(viewsets.ModelViewSet):
       serializer.is_valid()
 
       return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+  @action(detail=True, methods=['get'])
+  def comments(self, request, pk=None):
+      work = self.get_object()
+      comments = work.comments.all().order_by('created_at')
+      serializer = WorkCommentSerializer(data=comments, many=True, context={'request': request})
+      serializer.is_valid()
+      return Response(serializer.data, status=status.HTTP_200_OK)
+
+class WorkCommentViewSet(viewsets.ModelViewSet):
+  queryset = WorkComment.objects.all()
+  serializer_class = WorkCommentSerializer
+  ordering_fields = ['id']
+  permission_classes = [IsAuthenticated]
+  ordering = ('-id',)
+
+  def get_serializer_class(self):
+    if self.action == 'list':
+      return WorkCommentSerializer
+    return WorkCommentCreateSerializer
+
+  @action(detail=True, methods=['post'])
+  def interact(self, request, pk=None):
+      comment = self.get_object()
+      user = request.user
+
+      if comment.likes.filter(id=user.id).exists():
+          # If the user already liked the comment, remove the like
+          comment.likes.remove(user)
+          return Response({'status': 'Like removed', 'like_count': comment.like_count()}, status=status.HTTP_200_OK)
+      else:
+          # Otherwise, add the like
+          comment.likes.add(user)
+          return Response({'status': 'Like added', 'like_count': comment.like_count()}, status=status.HTTP_200_OK)

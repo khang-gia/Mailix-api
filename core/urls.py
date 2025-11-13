@@ -14,5 +14,7 @@ router.register(r'profile_hrs', views.ProfileHRViewSet)
 router.register(r'titles', views.TitleViewSet)
 router.register(r'customers', views.CustomerViewSet)
 router.register(r'works',views.WorkViewSet)
+router.register(r'work_comments',views.WorkCommentViewSet)
+
 urlpatterns = router.urls + [
 ]

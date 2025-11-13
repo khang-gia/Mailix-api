@@ -484,3 +484,32 @@ class WorkHistorySerializer(serializers.ModelSerializer):
             return [{'field': 'object', 'old_value': None, 'new_value': 'Created'}]
             
         return []
+
+class WorkCommentSerializer(serializers.ModelSerializer):
+  
+    user = serializers.SerializerMethodField()
+    likes = UserListSerializer(read_only=True, many=True)
+    like_count = serializers.SerializerMethodField()
+    is_liked_by_you = serializers.SerializerMethodField()
+    class Meta:
+        model = WorkComment
+        fields = '__all__'
+    
+    def get_user(self, obj):
+      user_serializer = UserOtherViewSerializer(obj.user, context=self.context)
+      return user_serializer.data
+
+    def get_like_count(self, obj):
+        return obj.like_count()
+
+    def get_is_liked_by_you(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.likes.filter(id=request.user.id).exists()
+        return False
+
+class WorkCommentCreateSerializer(serializers.ModelSerializer):
+  
+  class Meta:
+        model = WorkComment
+        exclude = ['likes',]
