@@ -413,11 +413,74 @@ class WorkListSerializer(serializers.ModelSerializer):
 
 class WorkDetailSerializer(serializers.ModelSerializer):
     assigned_to = UserListSerializer(read_only=True, many=True)
+    assigned_to_list = UserOtherViewSerializer(read_only=True, many=True, source='assigned_to')
+
     assigned_by = UserListSerializer(read_only=True, many=True)
+    assigned_by_list = UserOtherViewSerializer(read_only=True, many=True, source='assigned_by')
+
     managers = UserListSerializer(read_only=True, many=True)
-    
+    managers_list = UserOtherViewSerializer(read_only=True, many=True, source='managers')
+
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    priority_display = serializers.CharField(source='get_priority_display', read_only=True)
     class Meta:
         model = Works
         fields = '__all__'
 
-  
+class WorkHistorySerializer(serializers.ModelSerializer):
+    assigned_to = UserListSerializer(read_only=True, many=True)
+    assigned_by = UserListSerializer(read_only=True, many=True)
+    managers = UserListSerializer(read_only=True, many=True)
+    history_type_display = serializers.CharField(source='get_history_type_display', read_only=True)
+    history_user = UserListSerializer(read_only=True)
+    field_changes = serializers.SerializerMethodField()
+    def __init__(self, model, *args, fields='__all__', **kwargs):
+        self.Meta.model = model
+        self.Meta.fields = fields
+        super().__init__()
+    class Meta:
+        pass
+    
+    def get_field_changes(self, history_record):
+        """
+        Calculates the differences between the current history_record 
+        and its previous version.
+        """
+        # 1. Get the previous record
+        prev_record = history_record.prev_record
+        
+        # 2. Only proceed if it's an UPDATE ('~') or DELETE ('-') and a prev_record exists
+        if history_record.history_type in ('~', '-') and prev_record:
+            
+            try:
+                # Calculate the difference (returns a ModelDelta object)
+                delta = history_record.diff_against(prev_record)
+            except Exception:
+                # Handle cases where diffing might fail (e.g., related object deleted)
+                return []
+            
+            changes_list = []
+            
+            display_fields =[ 'status', 'priority']
+            # 3. Iterate over the ModelChange objects, old and new values need to be a string
+            for change in delta.changes:
+              diff_to_append = {
+                  'field': change.field,
+                  'old_value': str(change.old) if change.old is not None else None,
+                  'new_value': str(change.new) if change.new is not None else None,
+              }
+              if change.field in display_fields:
+                # Get display values for choice fields
+                field_method = f'get_{change.field}_display'
+                if hasattr(history_record, field_method):
+                    diff_to_append['old_value'] = getattr(prev_record, field_method)() if change.old is not None else None
+                    diff_to_append['new_value'] = getattr(history_record, field_method)() if change.new is not None else None
+              changes_list.append(diff_to_append)
+            return changes_list
+            
+        elif history_record.history_type == '+':
+            # For a 'CREATE' action, you might return all fields as 'new' values, 
+            # but usually, you just note the creation.
+            return [{'field': 'object', 'old_value': None, 'new_value': 'Created'}]
+            
+        return []

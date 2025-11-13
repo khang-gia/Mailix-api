@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import UserSerializer, ProfileSerializer, LoginSerializer, SystemNotificationSerializer, FeedbackSerializer, HappeningEventSerializer, HotEventSerializer,\
   CredentialsSerializer, ProfileHRListSerializer, ProfileHRDetailSerializer, ProfileHRSerializer, UserListSerializer, TitleSerializer, TitleListSerializer, UsernameSerializer, \
-    OTPSerializer, CustomerSerializer, CustomerListSerializer, CustomerDetailSerializer, WorkSerializer, WorkListSerializer, WorkDetailSerializer
+    OTPSerializer, CustomerSerializer, CustomerListSerializer, CustomerDetailSerializer, WorkSerializer, WorkListSerializer, WorkDetailSerializer, WorkHistorySerializer
 from django_filters.rest_framework import FilterSet
 import django_filters
 from django.db.models import Q, Count
@@ -1066,3 +1066,13 @@ class WorkViewSet(viewsets.ModelViewSet):
     )
     response['Content-Disposition'] = 'attachment; filename="Works_Export.xlsx"'
     return response
+
+  @action(detail=True, methods=['get'])
+  def history(self, request, pk=None):
+      work = self.get_object()
+      model = work.history.__dict__['model']
+      works_history = Works.history.filter(id=pk).order_by('-history_date')
+      serializer = WorkHistorySerializer(model, works_history, many=True)
+      serializer.is_valid()
+
+      return Response(serializer.data, status=status.HTTP_200_OK)

@@ -708,3 +708,17 @@ class Works(BaseCreateUpdateModel):
 
     def __str__(self):
         return "Work <{}> {}".format(self.pk, self.name)
+
+
+class WorkAttachment(BaseCreateUpdateModel):
+    work = models.ForeignKey(Works, related_name='attachments', on_delete=models.CASCADE, db_index=True)
+    file = models.FileField(upload_to='work_attachments/')
+    filename = models.CharField(max_length=255, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.filename and self.file:
+            self.filename = self.file.name
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Attachment for Work {self.work.name}: {self.filename or 'No Name'}"

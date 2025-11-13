@@ -11,7 +11,7 @@ admin.site.register(FamilyRelationship)
 admin.site.register(ProfessionalQualification)
 admin.site.register(CommunistPartyMember)
 admin.site.register(Profile)
-
+admin.site.register(WorkAttachment)
 @admin.register(ProfileHR)
 class ProfileHRAdmin(admin.ModelAdmin):
   list_display = ('full_name', 'status', 'department', 'direct_manager', 'user', 'email')
