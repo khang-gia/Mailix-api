@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR, Title, Customer, Works, WorkComment
+from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR, Title, Customer, Works, WorkComment, CustomerComment
 # Create your views here.
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,7 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from .serializers import UserSerializer, ProfileSerializer, LoginSerializer, SystemNotificationSerializer, FeedbackSerializer, HappeningEventSerializer, HotEventSerializer,\
   CredentialsSerializer, ProfileHRListSerializer, ProfileHRDetailSerializer, ProfileHRSerializer, UserListSerializer, TitleSerializer, TitleListSerializer, UsernameSerializer, \
     OTPSerializer, CustomerSerializer, CustomerListSerializer, CustomerDetailSerializer, WorkSerializer, WorkListSerializer, WorkDetailSerializer, WorkHistorySerializer, \
-      WorkCommentSerializer, WorkCommentCreateSerializer
+      WorkCommentSerializer, WorkCommentCreateSerializer, CustomerCommentSerializer, CustomerCommentCreateSerializer, CustomerHistorySerializer
 from django_filters.rest_framework import FilterSet
 import django_filters
 from django.db.models import Q, Count
@@ -873,6 +873,26 @@ class CustomerViewSet(viewsets.ModelViewSet):
     )
     response['Content-Disposition'] = 'attachment; filename="Customers_Export.xlsx"'
     return response
+
+  @action(detail=True, methods=['get'])
+  def history(self, request, pk=None):
+      customer = self.get_object()
+      model = customer.history.__dict__['model']
+      customers_history = Customer.history.filter(id=pk).order_by('-history_date')
+      serializer = CustomerHistorySerializer(model, customers_history, many=True)
+      serializer.is_valid()
+
+      return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+  @action(detail=True, methods=['get'])
+  def comments(self, request, pk=None):
+      customer = self.get_object()
+      comments = customer.comments.all().order_by('created_at')
+      serializer = CustomerCommentSerializer(data=comments, many=True, context={'request': request})
+      serializer.is_valid()
+      return Response(serializer.data, status=status.HTTP_200_OK)
+
 class WorkFilter(FilterSet):
   search = django_filters.CharFilter(method='elastic_search')
   assigned_to_person = django_filters.CharFilter(method='filter_assigned_to_person')
@@ -1099,6 +1119,32 @@ class WorkCommentViewSet(viewsets.ModelViewSet):
     if self.action == 'list':
       return WorkCommentSerializer
     return WorkCommentCreateSerializer
+
+  @action(detail=True, methods=['post'])
+  def interact(self, request, pk=None):
+      comment = self.get_object()
+      user = request.user
+
+      if comment.likes.filter(id=user.id).exists():
+          # If the user already liked the comment, remove the like
+          comment.likes.remove(user)
+          return Response({'status': 'Like removed', 'like_count': comment.like_count()}, status=status.HTTP_200_OK)
+      else:
+          # Otherwise, add the like
+          comment.likes.add(user)
+          return Response({'status': 'Like added', 'like_count': comment.like_count()}, status=status.HTTP_200_OK)
+
+class CustomerCommentViewSet(viewsets.ModelViewSet):
+  queryset = CustomerComment.objects.all()
+  serializer_class = CustomerCommentSerializer
+  ordering_fields = ['id']
+  permission_classes = [IsAuthenticated]
+  ordering = ('-id',)
+
+  def get_serializer_class(self):
+    if self.action == 'list':
+      return CustomerCommentSerializer
+    return CustomerCommentCreateSerializer
 
   @action(detail=True, methods=['post'])
   def interact(self, request, pk=None):

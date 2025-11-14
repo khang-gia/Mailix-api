@@ -298,6 +298,8 @@ class CustomerDetailSerializer(serializers.ModelSerializer):
     type_of_customer_display = serializers.CharField(source='get_type_of_customer_display', read_only=True)
     line_of_business_display = serializers.CharField(source='get_line_of_business_display', read_only=True)
     company_type_display = serializers.CharField(source='get_company_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    stage_display = serializers.CharField(source='get_stage_display', read_only=True)
     class Meta:
         model = Customer
         fields = '__all__'
@@ -512,4 +514,92 @@ class WorkCommentCreateSerializer(serializers.ModelSerializer):
   
   class Meta:
         model = WorkComment
+        exclude = ['likes',]
+
+class CustomerHistorySerializer(serializers.ModelSerializer):
+    curators = UserListSerializer(read_only=True, many=True)
+    history_type_display = serializers.CharField(source='get_history_type_display', read_only=True)
+    history_user = UserListSerializer(read_only=True)
+    field_changes = serializers.SerializerMethodField()
+    def __init__(self, model, *args, fields='__all__', **kwargs):
+        self.Meta.model = model
+        self.Meta.fields = fields
+        super().__init__()
+    class Meta:
+        pass
+    
+    def get_field_changes(self, history_record):
+        """
+        Calculates the differences between the current history_record 
+        and its previous version.
+        """
+        # 1. Get the previous record
+        prev_record = history_record.prev_record
+        
+        # 2. Only proceed if it's an UPDATE ('~') or DELETE ('-') and a prev_record exists
+        if history_record.history_type in ('~', '-') and prev_record:
+            
+            try:
+                # Calculate the difference (returns a ModelDelta object)
+                delta = history_record.diff_against(prev_record)
+            except Exception:
+                # Handle cases where diffing might fail (e.g., related object deleted)
+                return []
+            
+            changes_list = []
+            
+            display_fields =[ 'type_of_customer', 'customer_group','customer_source','status','stage']
+            ignore_fields = ['avatar']
+            # 3. Iterate over the ModelChange objects, old and new values need to be a string
+            for change in delta.changes:
+              diff_to_append = {
+                  'field': change.field,
+                  'old_value': str(change.old) if change.old is not None else None,
+                  'new_value': str(change.new) if change.new is not None else None,
+              }
+              if change.field in ignore_fields:
+                diff_to_append['old_value'] = diff_to_append['new_value'] = ''
+              elif change.field in display_fields:
+                # Get display values for choice fields
+                field_method = f'get_{change.field}_display'
+                if hasattr(history_record, field_method):
+                    diff_to_append['old_value'] = getattr(prev_record, field_method)() if change.old is not None else None
+                    diff_to_append['new_value'] = getattr(history_record, field_method)() if change.new is not None else None
+              changes_list.append(diff_to_append)
+            return changes_list
+            
+        elif history_record.history_type == '+':
+            # For a 'CREATE' action, you might return all fields as 'new' values, 
+            # but usually, you just note the creation.
+            return [{'field': 'object', 'old_value': None, 'new_value': 'Created'}]
+            
+        return []
+
+class CustomerCommentSerializer(serializers.ModelSerializer):
+  
+    user = serializers.SerializerMethodField()
+    likes = UserListSerializer(read_only=True, many=True)
+    like_count = serializers.SerializerMethodField()
+    is_liked_by_you = serializers.SerializerMethodField()
+    class Meta:
+        model = CustomerComment
+        fields = '__all__'
+    
+    def get_user(self, obj):
+      user_serializer = UserOtherViewSerializer(obj.user, context=self.context)
+      return user_serializer.data
+
+    def get_like_count(self, obj):
+        return obj.like_count()
+
+    def get_is_liked_by_you(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.likes.filter(id=request.user.id).exists()
+        return False
+
+class CustomerCommentCreateSerializer(serializers.ModelSerializer):
+  
+  class Meta:
+        model = CustomerComment
         exclude = ['likes',]

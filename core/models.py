@@ -541,8 +541,6 @@ class Customer(BaseCreateUpdateModel):
     type_of_customer = models.IntegerField("Type of customer", choices=CUSTOMER_TYPES, default=1, db_index=True)
     customer_group = models.IntegerField("Customer Group", choices=CUSTOMER_GROUPS, default=1, db_index=True)
     customer_source = models.IntegerField("Customer Source", choices=CUSTOMER_SOURCES, default=1, db_index=True)
-    note = models.TextField("Note", null=True, blank=True)
-    customer_avatar = models.ImageField("Customer Avatar", upload_to='customer_avatars/', null=True, blank=True)
     website = models.URLField("Website", null=True, blank=True)
     status = models.IntegerField("Status", choices=CUSTOMER_STATUSES, default=1, null=True, blank=True, db_index=True)
     stage = models.IntegerField("Stage", choices=CUSTOMER_STAGES, default=1, null=True, blank=True, db_index=True)
@@ -596,6 +594,11 @@ class CustomerComment(BaseCreateUpdateModel):
     customer = models.ForeignKey(Customer, related_name='comments', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     text = models.TextField()
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='customer_replies')
+    likes = models.ManyToManyField(User, related_name='customer_liked_comments', blank=True)
+    def like_count(self):
+        return self.likes.count()
+
     def __str__(self):
         return "Comment <{}> by {}".format(self.pk, self.user)
 
