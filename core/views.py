@@ -32,6 +32,7 @@ from core.utils import generate_secure_password
 from system.miab import add_mail_user, set_mail_user_password
 from django.db import transaction
 from django.http import HttpResponse
+from datetime import datetime
 
 def update_profile(request):
     data = request.data
@@ -371,6 +372,7 @@ class ProfileHRFilter(FilterSet):
   departments = django_filters.CharFilter(method='filter_departments')
   direct_managers = django_filters.CharFilter(method='filter_direct_managers')
   search = django_filters.CharFilter(method='elastic_search')
+  using_domain_email = django_filters.BooleanFilter(method='filter_using_domain_email')
   class Meta:
     model = ProfileHR
     fields = ['full_name','employee_code','status']
@@ -398,6 +400,13 @@ class ProfileHRFilter(FilterSet):
 
     direct_manager_ids = value.split(',')
     return queryset.filter(direct_manager__id__in=direct_manager_ids).distinct()
+
+
+  def filter_using_domain_email(self, queryset, name, value):
+    if value:
+      return queryset.filter(email__isnull=False)
+    return queryset
+
 class ProfileHRViewSet(viewsets.ModelViewSet):
   queryset = ProfileHR.objects.all()
   serializer_class = ProfileHRSerializer
@@ -902,9 +911,11 @@ class WorkFilter(FilterSet):
   managers = django_filters.CharFilter(method='filter_managers')
   statuses = django_filters.CharFilter(method='filter_statuses')
   priorities = django_filters.CharFilter(method='filter_priorities')
+  in_date = django_filters.CharFilter(method='filter_in_date')
+  today_task = django_filters.BooleanFilter(method='filter_today_task')
   class Meta:
     model = Works
-    fields = ['name', 'assigned_to','status','code', 'priority']
+    fields = ['name', 'assigned_to','status','code', 'priority','start_date','end_date']
 
   def filter_assigned_to_isnull(self, queryset, name, value):
     if value:
@@ -959,6 +970,16 @@ class WorkFilter(FilterSet):
 
     priority_ids = value.split(',')
     return queryset.filter(priority__in=priority_ids).distinct()
+
+  def filter_in_date(self, queryset, name, value):
+    if not value:
+      return queryset
+    return queryset.filter(start_date__lte=value, end_date__gte=value)
+
+  def filter_today_task(self, queryset, name, value):
+    if not value:
+      return queryset
+    return queryset.filter(start_date__lte=timezone.now(), end_date__gte=timezone.now())
 
 class WorkViewSet(viewsets.ModelViewSet):
   queryset = Works.objects.all()
@@ -1159,3 +1180,29 @@ class CustomerCommentViewSet(viewsets.ModelViewSet):
           # Otherwise, add the like
           comment.likes.add(user)
           return Response({'status': 'Like added', 'like_count': comment.like_count()}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def hrm_statistic(request):
+    """
+    Returns HR statistics using a single database query for optimized performance.
+    """
+    current_month = datetime.now().month
+    statistics = ProfileHR.objects.aggregate(
+        # Total count (standard aggregation)
+        total_profilehr=Count('id'), 
+        
+        # Conditional counts using Q objects
+        # status=0 is Working
+        total_profilehr_working=Count('id', filter=Q(status=0)),
+        
+        # status=3 is Resigned
+        total_profilehr_resigned=Count('id', filter=Q(status=3)),
+        
+        # Count profiles whose Date of Birth (dob) is in the current month
+        total_profilehr_dob_inmonth=Count('id', filter=Q(dob__month=current_month)),
+
+        total_pending_action=Count('id', filter=Q(status=4))
+    )
+
+    # The statistics dictionary keys already match the desired output structure
+    return Response(statistics, status=status.HTTP_200_OK)

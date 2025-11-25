@@ -707,6 +707,7 @@ class Works(BaseCreateUpdateModel):
     status = models.IntegerField("Status", choices=STATUSES, default=1, null=True, blank=True, db_index=True)
     progress = models.PositiveIntegerField(default=0)
     related_work = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_works', db_index=True)
+    brief = models.TextField("Brief", null=True, blank=True)
     history = HistoricalRecords()
 
     def __str__(self):

@@ -18,4 +18,5 @@ router.register(r'work_comments',views.WorkCommentViewSet)
 router.register(r'customer_comments',views.CustomerCommentViewSet)
 
 urlpatterns = router.urls + [
+    path('hrm_statistic/', views.hrm_statistic, name='hrm_statistic'),
 ]
