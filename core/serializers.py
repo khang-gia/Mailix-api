@@ -29,6 +29,7 @@ class UsernameSerializer(serializers.Serializer):
 
 class UserListSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField(read_only=True)
+    avatar = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = User
         exclude = ['password', 'user_permissions', 'is_superuser', 'is_staff']
@@ -37,6 +38,15 @@ class UserListSerializer(serializers.ModelSerializer):
     def get_full_name(self, obj):
       return '%s %s' % (obj.first_name, obj.last_name) if obj.first_name else obj.username if not hasattr(obj, 'profile_hr') else obj.profile_hr.full_name
 
+    def get_avatar(self, obj):
+      request = self.context.get('request')
+      if hasattr(obj, 'profile_hr') and obj.profile_hr and obj.profile_hr.avatar:
+        avatar_url = obj.profile_hr.avatar.url
+        if request is not None:
+          return request.build_absolute_uri(avatar_url)
+
+        return avatar_url
+      return None
   
 class ProfileHRDetailSerializer(serializers.ModelSerializer):
     department = DepartmentListSerializer(read_only=True)

@@ -915,7 +915,7 @@ class WorkFilter(FilterSet):
   today_task = django_filters.BooleanFilter(method='filter_today_task')
   class Meta:
     model = Works
-    fields = ['name', 'assigned_to','status','code', 'priority','start_date','end_date']
+    fields = ['name', 'assigned_to','status','code', 'priority','start_date','end_date','assigned_by', 'managers']
 
   def filter_assigned_to_isnull(self, queryset, name, value):
     if value:
