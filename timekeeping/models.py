@@ -2,7 +2,7 @@ from django.db import models
 
 from django.contrib.auth.models import User, Group
 
-from core.mixins.base_model import BaseModel, BaseCreateDeleteModel, BaseCreateUpdateModel
+from core.mixins.base_model import BaseModel, BaseCreateDeleteModel, BaseCreateUpdateDeleteModel
 from simple_history.models import HistoricalRecords
 # from django.contrib.gis.db import models as gis_models
 

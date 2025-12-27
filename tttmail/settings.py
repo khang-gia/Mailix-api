@@ -61,7 +61,8 @@ INSTALLED_APPS = [
     'consult',
     'system',
     'upload',
-    'timekeeping'
+    'timekeeping',
+    'social'
 ]
 
 MIDDLEWARE = [

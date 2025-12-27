@@ -1,14 +1,14 @@
 from django.db import models
-# from core.models import BaseCreateDeleteModel, BaseCreateUpdateModel
+# from core.models import BaseCreateDeleteModel, BaseCreateUpdateDeleteModel
 from django.contrib.auth.models import User, Group
 
-from core.mixins.base_model import BaseModel, BaseCreateDeleteModel, BaseCreateUpdateModel
+from core.mixins.base_model import BaseModel, BaseCreateDeleteModel, BaseCreateUpdateDeleteModel
 from simple_history.models import HistoricalRecords
 import secrets
 from django.conf import settings
 from django.utils import timezone
 
-class PackageConfig(BaseCreateUpdateModel):
+class PackageConfig(BaseCreateUpdateDeleteModel):
   name = models.CharField("Name", max_length=100, db_index=True)
   code = models.CharField("Code", max_length=50, unique=True, db_index=True)
   description = models.TextField("Description", null=True, blank=True, db_index=True)
@@ -45,7 +45,7 @@ INDUSTRY_CHOICES = (
   (14, 'Agriculture'),
   (15, 'Other'),
 )
-class Company(BaseCreateUpdateModel):
+class Company(BaseCreateUpdateDeleteModel):
     name = models.CharField('Name',max_length=100, db_index=True)
     code = models.CharField('Code (AKA)', max_length=100, null=True, blank=True, db_index=True)
     tax_code = models.CharField('Tax Code', max_length=100, db_index=True)
@@ -73,7 +73,7 @@ class Company(BaseCreateUpdateModel):
     def __str__(self) -> str:
         return "Company {}".format(self.name)
 
-class BusinessUnit(BaseCreateUpdateModel):
+class BusinessUnit(BaseCreateUpdateDeleteModel):
     name = models.CharField('Name',max_length=100)
     description = models.TextField('Description',null=True, blank=True)
     history = HistoricalRecords()
@@ -85,7 +85,7 @@ DEPARTMENT_TYPES = (
     (1, 'Company branch'),
     (2, 'Department')
 )
-class Department(BaseCreateUpdateModel):
+class Department(BaseCreateUpdateDeleteModel):
     code = models.CharField("Code", max_length=20, null=True, blank=True, db_index=True)
     name = models.CharField("Name", max_length=50, db_index=True)
     location = models.CharField("Location", max_length=200, null=True, blank=True, db_index=True)
@@ -131,7 +131,7 @@ class SystemResource(BaseModel):
     def __str__(self) -> str:
         return "SystemResource <{}>".format(self.name)
 
-class SystemGroup(BaseCreateUpdateModel):
+class SystemGroup(BaseCreateUpdateDeleteModel):
     """This model is used to store system groups (for decentralization only)"""
     name = models.CharField("Name", max_length=50, db_index=True)
     code = models.CharField("Code", max_length=20, null=True, blank=True, db_index=True)
@@ -143,7 +143,7 @@ class SystemGroup(BaseCreateUpdateModel):
     def __str__(self) -> str:
         return "SystemGroup <{}>".format(self.name)
 
-class TrustedDevice(BaseCreateUpdateModel):
+class TrustedDevice(BaseCreateUpdateDeleteModel):
     user = models.ForeignKey(
         'auth.User',
         on_delete=models.CASCADE,
@@ -191,7 +191,7 @@ PRIORITY_CHOICES = (
   (5, 'Critical'),
   (6, 'None'),
 )
-class ScheduleEvent(BaseCreateUpdateModel):
+class ScheduleEvent(BaseCreateUpdateDeleteModel):
     user = models.ForeignKey(
         'auth.User',
         on_delete=models.CASCADE,

@@ -2,7 +2,7 @@ from django.db import models
 from django.dispatch.dispatcher import receiver
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
-from core.mixins.base_model import BaseModel, BaseCreateDeleteModel, BaseCreateUpdateModel
+from core.mixins.base_model import BaseModel, BaseCreateDeleteModel, BaseCreateUpdateDeleteModel, BaseCreateUpdateModel
 from simple_history.models import HistoricalRecords
 import filetype
 
@@ -257,7 +257,7 @@ ACCOUNT_STATUSES = (
   (3, 'Locked'),
   (4, 'Deactive'),
 )
-class ProfileHR(BaseCreateUpdateModel):
+class ProfileHR(BaseCreateUpdateDeleteModel):
     full_name = models.CharField("Full Name", max_length=200, db_index=True)
     user = models.OneToOneField("auth.User", on_delete=models.SET_NULL, related_name='profile_hr', db_index=True, null=True, blank=True, unique=True)
     avatar = models.ImageField("Avatar", upload_to='avatars', null=True, blank=True)
@@ -373,7 +373,7 @@ USER_STATUSES = (
   (3, 'Locked'),
   (9, 'Deactive')
 )
-class Profile(BaseCreateUpdateModel):
+class Profile(BaseCreateUpdateDeleteModel):
   group = models.ForeignKey('system.SystemGroup', on_delete=models.SET_NULL, null=True, blank=True, related_name="profiles", db_index=True)
   is_system_admin = models.BooleanField('Is System Admin', default=False, db_index=True)
   user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', db_index=True)
@@ -418,7 +418,7 @@ CONTRACT_TYPES = (
 #   (0,'Level 1'),
   
 # )
-# class Contract(BaseCreateUpdateModel):
+# class Contract(BaseCreateUpdateDeleteModel):
 #   code = models.CharField("Code", max_length=100)
 #   contract_type = models.IntegerField('Type', choices=CONTRACT_TYPES, default=0, db_index=True)
 #   department = models.ForeignKey("system.Department", on_delete=models.SET_NULL, related_name="contracts", null=True, blank=True, db_index=True)
@@ -518,7 +518,7 @@ TITLES = (
   (16, 'Lady'),
 )
 
-class Customer(BaseCreateUpdateModel):
+class Customer(BaseCreateUpdateDeleteModel):
     name = models.CharField("Name", max_length=200, db_index=True)
     avatar = models.ImageField("Avatar", upload_to='customer_avatars', null=True, blank=True)
     customer_code = models.CharField("Customer Code", max_length=100, null=True, blank=True, db_index=True)
@@ -577,7 +577,7 @@ def comment_attachment_path(instance, filename):
         'comment_attachment', 
         filename
     )
-class CustomerAttachment(BaseCreateUpdateModel):
+class CustomerAttachment(BaseCreateUpdateDeleteModel):
     customer = models.ForeignKey(Customer,related_name='attachments', on_delete=models.CASCADE)
     file = models.FileField(upload_to=customer_attachment_path)
     filename = models.CharField(max_length=255, blank=True, null=True)
@@ -590,7 +590,7 @@ class CustomerAttachment(BaseCreateUpdateModel):
     def __str__(self):
         return f"Attachment for Customer {self.customer.name}: {self.filename or 'No Name'}"
 
-class CustomerComment(BaseCreateUpdateModel):
+class CustomerComment(BaseCreateUpdateDeleteModel):
     customer = models.ForeignKey(Customer, related_name='comments', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     text = models.TextField()
@@ -653,7 +653,7 @@ class ContactAddtionalInfo(models.Model):
 #   (9, 'Others')
 # )
 
-# class Contacts(BaseCreateUpdateModel):
+# class Contacts(BaseCreateUpdateDeleteModel):
 #     # customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='contacts', db_index=True)
 #     full_name = models.CharField("Full Name", max_length=200, db_index=True)
 #     email = models.EmailField("Email", null=True, blank=True, db_index=True)
@@ -693,7 +693,7 @@ STATUSES = (
   (16, 'Deleted'),
   (17, 'Draft'),
 )
-class Works(BaseCreateUpdateModel):
+class Works(BaseCreateUpdateDeleteModel):
     name = models.CharField("Name", max_length=200, db_index=True)
     code = models.CharField("Code", max_length=100, unique=True, null=True, blank=True, db_index=True)
     description = models.TextField("Description", null=True, blank=True)
@@ -716,7 +716,7 @@ class Works(BaseCreateUpdateModel):
         return "Work <{}> {}".format(self.pk, self.name)
 
 
-class WorkAttachment(BaseCreateUpdateModel):
+class WorkAttachment(BaseCreateUpdateDeleteModel):
     work = models.ForeignKey(Works, related_name='attachments', on_delete=models.CASCADE, db_index=True)
     file = models.FileField(upload_to='work_attachments/')
     filename = models.CharField(max_length=255, blank=True, null=True)
@@ -729,7 +729,7 @@ class WorkAttachment(BaseCreateUpdateModel):
     def __str__(self):
         return f"Attachment for Work {self.work.name}: {self.filename or 'No Name'}"
 
-class WorkComment(BaseCreateUpdateModel):
+class WorkComment(BaseCreateUpdateDeleteModel):
     work = models.ForeignKey(Works, related_name='comments', on_delete=models.CASCADE, db_index=True)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     text = models.TextField()
