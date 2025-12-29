@@ -173,7 +173,8 @@ class PostListSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField(read_only=True)
     file = serializers.SerializerMethodField(read_only=True)
     poll_options = PollOptionSerializer(many=True, read_only=True)
-    is_liked_by_you = serializers.SerializerMethodField()
+    your_interaction = serializers.SerializerMethodField()
+    top_interaction_types = serializers.SerializerMethodField()
     
     class Meta:
         model = Post
@@ -196,11 +197,19 @@ class PostListSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(file_url)
             return file_url
         return None
-    def get_is_liked_by_you(self, obj):
+    
+    def get_your_interaction(self, obj):
+        """Get the user's interaction type if they have interacted, otherwise None"""
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return obj.interactions.filter(user=request.user).exists()
-        return False
+            interaction = obj.interactions.filter(user=request.user).first()
+            if interaction:
+                return interaction.interaction_type
+        return None
+    
+    def get_top_interaction_types(self, obj):
+        """Get top 3 interaction types for this post"""
+        return obj.get_top_interaction_types(limit=3)
 
 class PostDetailSerializer(serializers.ModelSerializer):
     author = UserOtherViewSerializer(read_only=True)

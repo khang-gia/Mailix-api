@@ -328,7 +328,7 @@ class PostViewSet(viewsets.ModelViewSet):
             serializer = PollVoteListSerializer(vote, context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
     
-    @action(detail=True, methods=['delete'])
+    @action(detail=True, methods=['post'])
     def remove_vote(self, request, pk=None):
         """Remove vote from a poll"""
         post = self.get_object()

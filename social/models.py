@@ -70,6 +70,23 @@ class Post(BaseCreateUpdateDeleteModel):
 
     def __str__(self):
         return "Post {}".format(self.title)
+    
+    def get_top_interaction_types(self, limit=3):
+        """
+        Get the top N most common interaction types for this post.
+        Returns a list of dicts with interaction_type and count.
+        Similar to Facebook's reaction summary (e.g., "👍 5  ❤️ 3  😂 2")
+        """
+        from django.db.models import Count
+        
+        top_interactions = (
+            self.interactions
+            .values('interaction_type')
+            .annotate(count=Count('interaction_type'))
+            .order_by('-count')[:limit]
+        )
+        
+        return list(top_interactions)
 class PollOption(models.Model):
     post = models.ForeignKey('Post', on_delete=models.CASCADE, related_name='poll_options')
     option = models.CharField("Option", max_length=255)
