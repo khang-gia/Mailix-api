@@ -255,6 +255,7 @@ def login(request, *args):
       'first_name': user.first_name,
       'last_name': user.last_name,
       'ref_uuid': str(user.profile_hr.ref_uuid) if user.profile_hr.ref_uuid else None,
+      'role': user.profile_hr.role,
       'profile_hr': {
         'id': user.profile_hr.id,
         'full_name': user.profile_hr.full_name,
