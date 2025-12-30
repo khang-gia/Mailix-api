@@ -20,7 +20,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from core.views import login, register, pre_login, generate_otp, verify_otp, generate_otp_with_email, reset_password, change_password
+from core.views import login, register, pre_login, generate_otp, verify_otp, generate_otp_with_email, reset_password, change_password, logout
 # from core.views import login, register, logout, generate_otp, verify_otp, GoogleLogin, reset_password
 from django.conf.urls.static import static
 from django.conf import settings
@@ -37,7 +37,7 @@ urlpatterns = [
         path('auth/', include([
             # path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
             # path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-            # path('logout/', logout, name='logout'),
+            path('logout/', logout, name='logout'),
             path('login/', login, name='login'),
             path('pre_login/', pre_login, name='pre_login'),
             path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),

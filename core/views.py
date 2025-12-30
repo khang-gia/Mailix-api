@@ -227,6 +227,18 @@ def pre_login(request, *args):
 
 @api_view(['POST'])
 @permission_classes([])
+def logout(request, *args):
+  """Logout endpoint that clears the mailix_session cookie"""
+  response = Response({'detail': 'Successfully logged out.'}, status=status.HTTP_200_OK)
+  response.delete_cookie(
+    key='mailix_session',
+    path='/',
+    samesite='Lax'
+  )
+  return response
+
+@api_view(['POST'])
+@permission_classes([])
 def login(request, *args):
   credential = LoginSerializer(data=request.data)
   if not credential.is_valid():
@@ -266,7 +278,7 @@ def login(request, *args):
     
     user_data_json = json.dumps(essential_user_data)
     response.set_cookie(
-      key='user_data',
+      key='mailix_session',
       value=user_data_json,
       max_age=7 * 24 * 60 * 60,  # 7 days
       secure=settings.COOKIE_SECURE_FLAG,  # True in production, False in development
