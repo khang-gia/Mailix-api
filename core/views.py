@@ -245,18 +245,34 @@ def login(request, *args):
   }, status=status.HTTP_200_OK)
   
   # Set user_data cookie for cross-domain access (e.g., mail application)
-  import json
-  user_data_json = json.dumps(user_serializer.data)
-  response.set_cookie(
-    key='user_data',
-    value=user_data_json,
-    max_age=7 * 24 * 60 * 60,  # 7 days
-    secure=settings.COOKIE_SECURE_FLAG,  # True in production, False in development
-    httponly=False,  # Allow JavaScript access (unlike trusted_device)
-    samesite='Lax'  # Cross-domain compatibility
-  )
+  # Only set cookie for users with profile_hr
+  if hasattr(user, 'profile_hr') and user.profile_hr:
+    import json
+    essential_user_data = {
+      'id': user.id,
+      'username': user.username,
+      'email': user.email,
+      'first_name': user.first_name,
+      'last_name': user.last_name,
+      'ref_uuid': str(user.profile_hr.ref_uuid) if user.profile_hr.ref_uuid else None,
+      'profile_hr': {
+        'id': user.profile_hr.id,
+        'full_name': user.profile_hr.full_name,
+        'email': user.profile_hr.email,
+        'employee_code': user.profile_hr.employee_code,
+      }
+    }
+    
+    user_data_json = json.dumps(essential_user_data)
+    response.set_cookie(
+      key='user_data',
+      value=user_data_json,
+      max_age=7 * 24 * 60 * 60,  # 7 days
+      secure=settings.COOKIE_SECURE_FLAG,  # True in production, False in development
+      httponly=False,  # Allow JavaScript access (unlike trusted_device)
+      samesite='Lax'  # Cross-domain compatibility
+    )
   
-  print('Set user_data cookie for user:', user.username)
   return response
 
 class UserFilter(FilterSet):

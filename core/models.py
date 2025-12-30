@@ -5,6 +5,7 @@ from django.db.models.signals import post_save
 from core.mixins.base_model import BaseModel, BaseCreateDeleteModel, BaseCreateUpdateDeleteModel, BaseCreateUpdateModel
 from simple_history.models import HistoricalRecords
 import filetype
+import uuid
 
 # Create your models here.
 ROLE_CHOICES = (
@@ -263,6 +264,7 @@ class ProfileHR(BaseCreateUpdateDeleteModel):
     avatar = models.ImageField("Avatar", upload_to='avatars', null=True, blank=True)
     department = models.ForeignKey("system.Department", on_delete=models.SET_NULL, related_name="profile_hr", null=True, blank=True)
     employee_code = models.CharField("Employee Code", max_length=50)
+    ref_uuid = models.UUIDField("Reference UUID", default=uuid.uuid4, editable=False, db_index=True, null=True, blank=True)
     #Personal Info
     timekeeping_id = models.CharField("Timekeeping ID", max_length=50, null=True, blank=True)
     profile_code = models.CharField("Profile Code", max_length=100, null=True, blank=True)
