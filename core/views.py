@@ -207,10 +207,7 @@ def pre_login(request, *args):
   if profile_user and profile_user.is_demo_account:
     # Directly log in demo accounts without OTP
     return Response({'allowed_login':True}, status=status.HTTP_200_OK)
-    
-  print('cookies: ',request.COOKIES)
   trusted_device_token = request.COOKIES.get('trusted_device')
-  print('trusted_device_token: ', trusted_device_token)
   if trusted_device_token:
     # Find a matching token for this user
     for device in user.trusted_devices.all():
@@ -239,7 +236,28 @@ def login(request, *args):
     return Response({'username': ['Email hoặc mật khẩu không đúng.']}, status=status.HTTP_401_UNAUTHORIZED)
   user_serializer = UserSerializer(user)
   refresh = RefreshToken.for_user(user)
-  return Response({'access': str(refresh.access_token), 'refresh': str(refresh), 'user': user_serializer.data}, status=status.HTTP_200_OK)
+  
+  # Create response with tokens and user data
+  response = Response({
+    'access': str(refresh.access_token), 
+    'refresh': str(refresh), 
+    'user': user_serializer.data
+  }, status=status.HTTP_200_OK)
+  
+  # Set user_data cookie for cross-domain access (e.g., mail application)
+  import json
+  user_data_json = json.dumps(user_serializer.data)
+  response.set_cookie(
+    key='user_data',
+    value=user_data_json,
+    max_age=7 * 24 * 60 * 60,  # 7 days
+    secure=settings.COOKIE_SECURE_FLAG,  # True in production, False in development
+    httponly=False,  # Allow JavaScript access (unlike trusted_device)
+    samesite='Lax'  # Cross-domain compatibility
+  )
+  
+  print('Set user_data cookie for user:', user.username)
+  return response
 
 class UserFilter(FilterSet):
     username = django_filters.CharFilter(field_name="name", lookup_expr='icontains')
