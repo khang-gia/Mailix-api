@@ -545,7 +545,8 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
           raise Exception(f'Cannot create email account on mail server: {res}')
         
         profile_hr.user = user
-        profile_hr.email = authen_email
+        profile_hr.email = email
+        profile_hr.personal_email = authen_email
         profile_hr.is_first_login = True
         profile_hr.save()
         transaction.on_commit(lambda: send_password_on_create_user(authen_email, email, username, password))
