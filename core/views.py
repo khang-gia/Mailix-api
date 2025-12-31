@@ -506,6 +506,8 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
 
   @action(detail=True , methods=['post'])
   def create_account(self, request, pk=None):
+    from system.mail_apis import create_mail_user
+    
     profile_hr = self.get_object()
     email = request.data.get('email', None)
     authen_email = request.data.get('authen_email', None)
@@ -528,9 +530,20 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
         user = User.objects.create_user(username=username, email=authen_email)
         user.set_password(password)
         user.save()
-        success, res = add_mail_user(email, password)
+        
+        # Create mail account on custom mail server
+        mail_data = {
+          "username": username,
+          "email": email,
+          "password": password,
+          "refId": profile_hr.ref_uuid,
+          "role": "USER",
+          "active": True
+        }
+        success, res = create_mail_user(mail_data)
         if not success:
-          raise Exception('Cannot create email account on Mail-in-a-Box server.')
+          raise Exception(f'Cannot create email account on mail server: {res}')
+        
         profile_hr.user = user
         profile_hr.email = authen_email
         profile_hr.is_first_login = True
@@ -618,6 +631,64 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
     )
 
     return Response({'detail': 'Download is in progress', 'id': download.id}, status=status.HTTP_200_OK)
+
+  @action(detail=False, methods=['get'])
+  def upcoming_birthdays(self, request, pk=None):
+    """Get employees with upcoming birthdays in the next 30 days"""
+    from datetime import datetime, timedelta
+    
+    today = datetime.now().date()
+    # Get birthdays for the next 30 days
+    days_ahead = 30
+    
+    # Get all profiles with dob (only active employees)
+    profiles = ProfileHR.objects.filter(
+      dob__isnull=False,
+      status=0  # Only active/working employees
+    ).select_related('user')
+    
+    # Calculate upcoming birthdays
+    upcoming = []
+    for profile in profiles:
+      if profile.dob:
+        # Create this year's birthday
+        try:
+          this_year_birthday = profile.dob.replace(year=today.year)
+        except ValueError:
+          # Handle Feb 29 on non-leap years
+          this_year_birthday = profile.dob.replace(year=today.year, day=28)
+        
+        # If birthday already passed this year, use next year
+        if this_year_birthday < today:
+          try:
+            this_year_birthday = profile.dob.replace(year=today.year + 1)
+          except ValueError:
+            this_year_birthday = profile.dob.replace(year=today.year + 1, day=28)
+        
+        days_until = (this_year_birthday - today).days
+        
+        if 0 <= days_until <= days_ahead:
+          # Get avatar URL - ProfileHR has avatar field directly
+          avatar_url = None
+          if profile.avatar:
+            # Build absolute URL for avatar
+            avatar_url = request.build_absolute_uri(profile.avatar.url)
+          
+          upcoming.append({
+            'id': profile.id,
+            'name': profile.full_name,
+            'avatar': avatar_url,
+            'date': this_year_birthday.isoformat(),
+            'dob': profile.dob.isoformat(),
+            'days_until': days_until
+          })
+    
+    # Sort by days_until
+    upcoming.sort(key=lambda x: x['days_until'])
+    
+    return Response(upcoming, status=status.HTTP_200_OK)
+
+
 
 class TitleFilter(FilterSet):
     search = django_filters.CharFilter(method='elastic_search')

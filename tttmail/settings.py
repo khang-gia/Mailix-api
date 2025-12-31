@@ -228,9 +228,17 @@ LOGGING = {
             'backupCount': 7,
             'formatter': 'app'
         },
-        'upload': { # log for mail-in-a-box integration
+        'upload': { # log for upload operations
             'level': 'INFO',
             'filename': BASE_DIR / 'logs/upload.log',
+            'class':'logging.handlers.RotatingFileHandler',
+            'maxBytes' : 1024*1024*20, # 50MB
+            'backupCount': 7,
+            'formatter': 'app'
+        },
+        'mail_server': { # log for custom mail server integration
+            'level': 'INFO',
+            'filename': BASE_DIR / 'logs/mail_server.log',
             'class':'logging.handlers.RotatingFileHandler',
             'maxBytes' : 1024*1024*20, # 50MB
             'backupCount': 7,
@@ -268,6 +276,11 @@ LOGGING = {
         'upload': {
             'handlers': ['upload'],
             'level': 'INFO',
+            'propagate': False
+        },
+        'mail_server': {
+            'handlers': ['mail_server'],
+            'level': os.getenv("DJANGO_LOG_LEVEL", "INFO"),
             'propagate': False
         },
     },
@@ -322,6 +335,8 @@ CONSTANCE_CONFIG = {
     'MIAB_USERNAME': ('you@example.com', 'Mail-in-a-Box username (email)'),
     'MIAB_PASSWORD': ('', 'Mail-in-a-Box password or API key'),
     'MIAB_URL': ('https://your-mailinabox-server.example.com', 'Mail-in-a-Box server URL'),
+    'MAIL_SERVER_URL': ('https://uat.mailix.vn/mail', 'Custom Mail Server URL'),
+    'MAIL_SERVER_TOKEN': ('', 'Custom Mail Server API Token'),
     'COMPANY_NETWORK_IP': (
         '', 'List of IP addresses of the company network (comma-separated)', str,
     ),
