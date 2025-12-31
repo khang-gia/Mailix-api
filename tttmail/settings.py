@@ -342,6 +342,12 @@ CONSTANCE_CONFIG = {
     ),
 }
 
+
+STATIC_URL = '/static/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 try:
     from .local_settings import *
 except Exception as e:
@@ -349,7 +355,3 @@ except Exception as e:
     pass
 
 
-STATIC_URL = '/static/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = '/media/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
