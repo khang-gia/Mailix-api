@@ -69,6 +69,9 @@ def reset_password(request, *args):
 
 @api_view(['POST'])
 def change_password(request, *args):
+  import logging
+  logger = logging.getLogger('miab')
+  
   new_password = request.data.get('new_password', None)
   old_password = request.data.get('old_password', None)
   user = request.user
@@ -76,14 +79,22 @@ def change_password(request, *args):
     return Response({'detail': 'PASSWORD_INVALID'}, status=status.HTTP_401_UNAUTHORIZED)
   if not new_password:
     return Response({'detail': 'PASSWORD IS REQUIRED'}, status=status.HTTP_400_BAD_REQUEST)
+  
+  # Change password in database
   user.set_password(new_password)
   user.save()
-  profile_hr= user.profile_hr
+  profile_hr = user.profile_hr
   profile_hr.is_first_login = False
   profile_hr.save()
-  success, res = set_mail_user_password(profile_hr.email, new_password) # Set miab password also
-  if not success:
-    raise Exception('Cannot create email account on Mail-in-a-Box server.')
+  
+  # Try to sync password to MIAB, but don't fail if it errors
+  try:
+    success, res = set_mail_user_password(profile_hr.email, new_password)
+    if not success:
+      logger.warning(f'Failed to sync password to MIAB for {profile_hr.email}: {res}')
+  except Exception as e:
+    logger.error(f'Exception while syncing password to MIAB for {profile_hr.email}: {str(e)}')
+  
   user_serializer = UserSerializer(user)
   return Response(user_serializer.data, status=status.HTTP_200_OK)
 
