@@ -21,6 +21,7 @@ from .serializers import (
 
 class SocialGroupFilter(FilterSet):
     search = django_filters.CharFilter(method='elastic_search')
+    my_groups = django_filters.BooleanFilter(method='filter_my_groups')
     
     class Meta:
         model = SocialGroup
@@ -34,6 +35,20 @@ class SocialGroupFilter(FilterSet):
         for field in fields:
             _q = _q | Q(**{field: value})
         return queryset.filter(_q)
+    
+    def filter_my_groups(self, queryset, name, value):
+        """Filter to show only groups where the user is a member"""
+        if not value:
+            return queryset
+        
+        user = self.request.user
+        # Get group IDs where user is a member
+        user_group_ids = SocialGroupMember.objects.filter(
+            user=user,
+            status=1  # Active members only
+        ).values_list('social_group_id', flat=True)
+        
+        return queryset.filter(id__in=user_group_ids)
 
 
 class SocialGroupViewSet(viewsets.ModelViewSet):
@@ -41,7 +56,7 @@ class SocialGroupViewSet(viewsets.ModelViewSet):
     serializer_class = SocialGroupSerializer
     filterset_class = SocialGroupFilter
     permission_classes = [IsAuthenticated]
-    ordering_fields = ['id', 'created_at']
+    ordering_fields = ['id', 'created_at', 'name', 'membership_date']
     ordering = ('-id',)
     
     def get_serializer_class(self):
@@ -50,6 +65,68 @@ class SocialGroupViewSet(viewsets.ModelViewSet):
         elif self.action == 'retrieve':
             return SocialGroupDetailSerializer
         return SocialGroupSerializer
+    
+    def get_queryset(self):
+        """
+        Return groups that the user can access:
+        - All public groups
+        - Private groups where the user is a member
+        - All groups if user is superuser
+        """
+        if self.request.user.is_superuser:
+            return SocialGroup.objects.all()
+        
+        user = self.request.user
+        
+        # Get IDs of groups where user is a member
+        user_group_ids = SocialGroupMember.objects.filter(
+            user=user,
+            status=1  # Active members only
+        ).values_list('social_group_id', flat=True)
+        
+        # Return public groups OR groups where user is a member
+        return SocialGroup.objects.filter(
+            Q(is_public=True) | Q(id__in=user_group_ids)
+        ).distinct()
+    
+    def filter_queryset(self, queryset):
+        """
+        Apply filters and handle membership_date annotation for sorting
+        """
+        # Check if we need to annotate with membership_date
+        my_groups_filter = self.request.query_params.get('my_groups')
+        ordering = self.request.query_params.get('ordering', '')
+        
+        if my_groups_filter and 'membership_date' in ordering:
+            from django.db.models import Subquery, OuterRef
+            
+            user = self.request.user
+            
+            # Subquery to get the membership created_at for each group
+            membership_subquery = SocialGroupMember.objects.filter(
+                social_group=OuterRef('pk'),
+                user=user,
+                status=1
+            ).values('created_at')[:1]
+            
+            queryset = queryset.annotate(
+                membership_date=Subquery(membership_subquery)
+            )
+        
+        # Apply the rest of the filters (including ordering)
+        return super().filter_queryset(queryset)
+
+    def perform_create(self, serializer):
+        """Create group and automatically add creator as admin member"""
+        group = serializer.save()
+        
+        # Automatically create membership for the creator as Admin
+        SocialGroupMember.objects.create(
+            social_group=group,
+            user=self.request.user,
+            role=1,  # Admin role
+            status=1  # Active status
+        )
     
     @action(detail=True, methods=['get'])
     def members(self, request, pk=None):

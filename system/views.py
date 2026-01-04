@@ -67,9 +67,13 @@ class DepartmentViewSet(viewsets.ModelViewSet):
 
 class ScheduleEventFilter(FilterSet):
     search = django_filters.CharFilter(method='elastic_search')
+    start_datetime__gte = django_filters.DateTimeFilter(field_name='start_datetime', lookup_expr='gte')
+    start_datetime__lte = django_filters.DateTimeFilter(field_name='start_datetime', lookup_expr='lte')
+    end_datetime__gte = django_filters.DateTimeFilter(field_name='end_datetime', lookup_expr='gte')
+    end_datetime__lte = django_filters.DateTimeFilter(field_name='end_datetime', lookup_expr='lte')
     class Meta:
         model = ScheduleEvent
-        fields = ['title',]
+        fields = ['title', 'start_datetime__gte', 'start_datetime__lte', 'end_datetime__gte', 'end_datetime__lte']
 
     def elastic_search(self, queryset, name, value):
         if not value:

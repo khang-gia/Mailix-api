@@ -14,6 +14,7 @@ class SocialGroupListSerializer(serializers.ModelSerializer):
     posts_count = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField(read_only=True)
     cover = serializers.SerializerMethodField(read_only=True)
+    your_role = serializers.SerializerMethodField()
     
     class Meta:
         model = SocialGroup
@@ -41,6 +42,15 @@ class SocialGroupListSerializer(serializers.ModelSerializer):
             if request is not None:
                 return request.build_absolute_uri(cover_url)
             return cover_url
+        return None
+    
+    def get_your_role(self, obj):
+        """Get the current user's role in this group, if they are a member"""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            membership = obj.members.filter(user=request.user, status=1).first()
+            if membership:
+                return membership.get_role_display()
         return None
 
 
