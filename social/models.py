@@ -142,4 +142,19 @@ def count_post_comments(sender, instance, created, **kwargs):
         post = instance.post
         post.comments_count = post.comments.count()
         post.save()
+
+class PostAttachment(BaseCreateUpdateDeleteModel):
+    post = models.ForeignKey('Post', on_delete=models.CASCADE, related_name='attachments')
+    file = models.FileField(upload_to='post_attachments')
+    file_type = models.CharField(max_length=50)  # 'image', 'video', 'document', 'pdf'
+    file_name = models.CharField(max_length=255)
+    file_size = models.BigIntegerField()  # in bytes
+    order = models.IntegerField(default=0)  # for ordering attachments
+    historical = HistoricalRecords()
+    
+    class Meta:
+        ordering = ['order', 'created_at']
+    
+    def __str__(self):
+        return f"Attachment {self.file_name} for Post {self.post.id}"
         

@@ -1,6 +1,24 @@
 from rest_framework import serializers
-from .models import SocialGroup, SocialGroupMember, Post, PollOption, PostInteraction, PollVote, PostComment
+from .models import SocialGroup, SocialGroupMember, Post, PollOption, PostInteraction, PollVote, PostComment, PostAttachment
 from core.serializers import UserOtherViewSerializer, UserListSerializer
+
+
+class PostAttachmentSerializer(serializers.ModelSerializer):
+    file = serializers.SerializerMethodField(read_only=True)
+    
+    class Meta:
+        model = PostAttachment
+        fields = ['id', 'file', 'file_type', 'file_name', 'file_size', 'order', 'created_at']
+        read_only_fields = ['id', 'created_at']
+    
+    def get_file(self, obj):
+        request = self.context.get('request')
+        if obj.file:
+            file_url = obj.file.url
+            if request is not None:
+                return request.build_absolute_uri(file_url)
+            return file_url
+        return None
 
 
 class SocialGroupSerializer(serializers.ModelSerializer):
@@ -185,6 +203,7 @@ class PostListSerializer(serializers.ModelSerializer):
     poll_options = PollOptionSerializer(many=True, read_only=True)
     your_interaction = serializers.SerializerMethodField()
     top_interaction_types = serializers.SerializerMethodField()
+    attachments = PostAttachmentSerializer(many=True, read_only=True)
     
     class Meta:
         model = Post
@@ -229,6 +248,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField(read_only=True)
     file = serializers.SerializerMethodField(read_only=True)
     user_interaction = serializers.SerializerMethodField()
+    attachments = PostAttachmentSerializer(many=True, read_only=True)
     
     class Meta:
         model = Post

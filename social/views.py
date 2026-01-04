@@ -177,6 +177,26 @@ class SocialGroupViewSet(viewsets.ModelViewSet):
         posts = group.posts.all().order_by('-is_pinned', '-created_at')
         serializer = PostListSerializer(posts, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['get'])
+    def importants(self, request, pk=None):
+        """
+        Get all important posts (announcements) for this group.
+        Returns posts with post_type=3 (Announcement) for the specified group.
+        """
+        group = self.get_object()
+        
+        # Get announcement posts for this group, ordered by creation date
+        important_posts = Post.objects.filter(
+            social_group=group,
+            post_type=3,  # Announcement type
+            status=3,  # Published status
+            deleted_at__isnull=True
+        ).select_related('author').order_by('-is_pinned', '-created_at')
+        
+        serializer = PostListSerializer(important_posts, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 
 class SocialGroupMemberFilter(FilterSet):
@@ -285,8 +305,36 @@ class PostViewSet(viewsets.ModelViewSet):
         return PostSerializer
     
     def perform_create(self, serializer):
-        """Set the author to the current user"""
-        serializer.save(author=self.request.user)
+        """Set the author to the current user and handle file attachments"""
+        from .models import PostAttachment
+        
+        post = serializer.save(author=self.request.user)
+        
+        # Handle multiple file uploads
+        files = self.request.FILES.getlist('attachments')
+        for index, file in enumerate(files):
+            file_type = self.get_file_type(file.content_type)
+            PostAttachment.objects.create(
+                post=post,
+                file=file,
+                file_type=file_type,
+                file_name=file.name,
+                file_size=file.size,
+                order=index
+            )
+        
+        return post
+    
+    def get_file_type(self, content_type):
+        """Determine file type based on content type"""
+        if content_type.startswith('image/'):
+            return 'image'
+        elif content_type.startswith('video/'):
+            return 'video'
+        elif content_type == 'application/pdf':
+            return 'pdf'
+        else:
+            return 'document'
     
     @action(detail=True, methods=['post'])
     def toggle_pin(self, request, pk=None):
