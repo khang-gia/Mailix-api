@@ -6,7 +6,7 @@ from core.mixins.base_model import BaseModel, BaseCreateDeleteModel, BaseCreateU
 from simple_history.models import HistoricalRecords
 import filetype
 import uuid
-
+import os
 # Create your models here.
 ROLE_CHOICES = (
   ('U', 'User'),
@@ -530,6 +530,8 @@ class Customer(BaseCreateUpdateDeleteModel):
     gender = models.CharField("Gender", max_length=10, null=True, blank=True)
     dob = models.DateField("Birthday", null=True, blank=True, db_index=True)
     note = models.TextField("Note", null=True, blank=True)
+    description = models.TextField("Description", null=True, blank=True)
+    attachment = models.FileField("Attachment", upload_to='customer_attachments/', null=True, blank=True)
     tax_code = models.CharField("Tax Code", max_length=20, null=True, blank=True, db_index=True)
     id_number = models.CharField("ID Number", max_length=20, null=True, blank=True, db_index=True)
     company_name = models.CharField("Company Name", max_length=200, null=True, blank=True, db_index=True)
@@ -557,17 +559,31 @@ class Customer(BaseCreateUpdateDeleteModel):
 def customer_attachment_path(instance, filename):
     """
     Generates the upload path for CustomerAttachment files using the unique customer code.
-    Format: '<customer_code>/customer_attachments/<filename>'
+    Automatically renames duplicate filenames by adding (1), (2), etc.
+    Format: '<customer_code>/customer_attachments/<filename>' or '<customer_code>/customer_attachments/<filename> (n)'
     """
+    from django.core.files.storage import default_storage
+    
     # Use the unique and immutable customer code
-    customer_code = instance.customer.code
+    customer_code = instance.customer.customer_code
+    
+    # Split filename into name and extension
+    name, ext = os.path.splitext(filename)
+    
+    # Base path for customer attachments
+    base_dir = os.path.join(customer_code, 'customer_attachments')
+    
+    # Start with the original filename
+    final_filename = filename
+    counter = 1
+    
+    # Keep checking until we find a unique filename
+    while default_storage.exists(os.path.join(base_dir, final_filename)):
+        final_filename = f"{name} ({counter}){ext}"
+        counter += 1
     
     # Construct the final path
-    return os.path.join(
-        customer_code, 
-        'customer_attachments', 
-        filename
-    )
+    return os.path.join(base_dir, final_filename)
 def comment_attachment_path(instance, filename):
     """
     Saves Comment attachments under /<user_code>/comment_attachment/
@@ -583,11 +599,18 @@ class CustomerAttachment(BaseCreateUpdateDeleteModel):
     customer = models.ForeignKey(Customer,related_name='attachments', on_delete=models.CASCADE)
     file = models.FileField(upload_to=customer_attachment_path)
     filename = models.CharField(max_length=255, blank=True, null=True)
-
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)    
     def save(self, *args, **kwargs):
-        if not self.filename and self.file:
-            self.filename = self.file.name
+        # Call parent save first to let Django process the upload_to function
         super().save(*args, **kwargs)
+        
+        # After saving, extract the actual filename from the file path
+        # This will include any (1), (2) suffixes added by our custom upload_to function
+        if self.file and not self.filename:
+            # Get just the filename from the full path (e.g., "customer_code/customer_attachments/file (1).pdf" -> "file (1).pdf")
+            self.filename = os.path.basename(self.file.name)
+            # Update only the filename field without triggering another save cycle
+            CustomerAttachment.objects.filter(pk=self.pk).update(filename=self.filename)
 
     def __str__(self):
         return f"Attachment for Customer {self.customer.name}: {self.filename or 'No Name'}"

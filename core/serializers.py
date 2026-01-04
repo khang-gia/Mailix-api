@@ -225,6 +225,23 @@ class CustomerImportSerializer(serializers.ModelSerializer):
           model = Customer
           fields = '__all__'
 
+class CustomerAttachmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerAttachment
+        fields = '__all__'
+        read_only_fields = ['uploaded_by']
+    
+    def create(self, validated_data):
+        validated_data['uploaded_by'] = self.context['request'].user
+        return super().create(validated_data)
+
+class CustomerAttachmentListSerializer(serializers.ModelSerializer):
+    uploaded_by = UserOtherViewSerializer(read_only=True)
+    class Meta:
+        model = CustomerAttachment
+        fields = '__all__'
+
+
 class CustomerSerializer(serializers.ModelSerializer):
     additional_infos_json = CustomerAdditionalSerializer(many=True, required=False)
     additional_infos = serializers.CharField(required=False, allow_blank=True)

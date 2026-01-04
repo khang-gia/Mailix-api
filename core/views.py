@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR, Title, Customer, Works, WorkComment, CustomerComment
+from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR, Title, Customer, Works, WorkComment, CustomerComment, CustomerAttachment
 # Create your views here.
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,7 +7,8 @@ from rest_framework.decorators import api_view, permission_classes
 from .serializers import UserSerializer, ProfileSerializer, LoginSerializer, SystemNotificationSerializer, FeedbackSerializer, HappeningEventSerializer, HotEventSerializer,\
   CredentialsSerializer, ProfileHRListSerializer, ProfileHRDetailSerializer, ProfileHRSerializer, UserListSerializer, TitleSerializer, TitleListSerializer, UsernameSerializer, \
     OTPSerializer, CustomerSerializer, CustomerListSerializer, CustomerDetailSerializer, WorkSerializer, WorkListSerializer, WorkDetailSerializer, WorkHistorySerializer, \
-      WorkCommentSerializer, WorkCommentCreateSerializer, CustomerCommentSerializer, CustomerCommentCreateSerializer, CustomerHistorySerializer
+      WorkCommentSerializer, WorkCommentCreateSerializer, CustomerCommentSerializer, CustomerCommentCreateSerializer, CustomerHistorySerializer, CustomerAttachmentSerializer, \
+        CustomerAttachmentListSerializer
 from django_filters.rest_framework import FilterSet
 import django_filters
 from django.db.models import Q, Count
@@ -269,6 +270,9 @@ def login(request, *args):
   
   # Set user_data cookie for cross-domain access (e.g., mail application)
   # Only set cookie for users with profile_hr
+  user_mapping = {
+    ''
+  }
   if hasattr(user, 'profile_hr') and user.profile_hr:
     import json
     essential_user_data = {
@@ -277,7 +281,7 @@ def login(request, *args):
       'email': user.email,
       'first_name': user.first_name,
       'last_name': user.last_name,
-      'ref_uuid': str(user.profile_hr.ref_uuid) if user.profile_hr.ref_uuid else None,
+      'refid': str(user.profile_hr.ref_uuid) if user.profile_hr.ref_uuid else None,
       'role': user.profile_hr.role,
       'profile_hr': {
         'id': user.profile_hr.id,
@@ -1031,6 +1035,23 @@ class CustomerViewSet(viewsets.ModelViewSet):
       serializer = CustomerCommentSerializer(data=comments, many=True, context={'request': request})
       serializer.is_valid()
       return Response(serializer.data, status=status.HTTP_200_OK)
+
+class CustomerAttachmentFilter(FilterSet):
+  class Meta:
+    model = CustomerAttachment
+    fields = ['customer']
+
+class CustomerAttachmentViewSet(viewsets.ModelViewSet):
+  queryset = CustomerAttachment.objects.all()
+  serializer_class = CustomerAttachmentSerializer
+  filterset_class = CustomerAttachmentFilter
+  ordering_fields = ['id']
+  ordering = ('-id',)
+
+  def get_serializer_class(self):
+    if self.action == 'list':
+      return CustomerAttachmentListSerializer
+    return CustomerAttachmentSerializer
 
 class WorkFilter(FilterSet):
   search = django_filters.CharFilter(method='elastic_search')
