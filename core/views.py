@@ -216,6 +216,13 @@ def pre_login(request, *args):
     return Response({'username': ['Email hoặc mật khẩu không đúng.']}, status=status.HTTP_401_UNAUTHORIZED)
   user_serializer = UserSerializer(user)
   profile_user = ProfileHR.objects.filter(user=user).first()
+  
+  # Check if user account is deactivated or inactive
+  if profile_user and profile_user.account_status in [2, 4]:
+    return Response({
+      'username': ['Your account has been deactivated. Please contact administrator.']
+    }, status=status.HTTP_403_FORBIDDEN)
+  
   if profile_user and profile_user.is_demo_account:
     # Directly log in demo accounts without OTP
     return Response({'allowed_login':True}, status=status.HTTP_200_OK)
@@ -474,7 +481,7 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
   serializer_class = ProfileHRSerializer
   filterset_class = ProfileHRFilter
   permission_classes = [IsAuthenticated]
-  ordering_fields = ['id']
+  ordering_fields = ['id', 'full_name', 'email', 'department', 'title']
   ordering = ('-id',)
   
   def get_serializer_class(self):
@@ -484,6 +491,12 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
       return ProfileHRDetailSerializer
     return ProfileHRSerializer
 
+  def get_queryset(self):
+    if self.request.user.is_superuser:
+      return self.queryset
+    # Regular users: exclude deactivated (4) and inactive (2) accounts
+    return self.queryset.exclude(account_status__in=[2, 4])
+    
   @action(detail=False, methods=['post'])
   def delete_users(self, request, pk=None):
     # role = request.user.profile.role
@@ -493,6 +506,14 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
     profile_ids = request.data['profiles']
     if not profile_ids:
       return Response(status=status.HTTP_400_BAD_REQUEST)
+    
+    # Get current user's profile ID
+    current_user_profile = ProfileHR.objects.filter(user=request.user).first()
+    if current_user_profile and current_user_profile.id in profile_ids:
+      return Response({
+        'detail': 'You cannot delete your own profile.'
+      }, status=status.HTTP_400_BAD_REQUEST)
+    
     for profile_id in profile_ids:
       try:
         profile = ProfileHR.objects.get(pk=profile_id)
@@ -508,10 +529,18 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
     profile_ids = request.data['profiles']
     if not profile_ids:
       return Response(status=status.HTTP_400_BAD_REQUEST)
+    
+    # Get current user's profile ID
+    current_user_profile = ProfileHR.objects.filter(user=request.user).first()
+    if current_user_profile and current_user_profile.id in profile_ids:
+      return Response({
+        'detail': 'You cannot deactivate your own profile.'
+      }, status=status.HTTP_400_BAD_REQUEST)
+    
     for profile_id in profile_ids:
       try:
         profile = ProfileHR.objects.get(pk=profile_id)
-        profile.status = 'Inactive'
+        profile.account_status = 4
         profile.save()
       except ProfileHR.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
