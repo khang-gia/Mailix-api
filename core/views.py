@@ -247,10 +247,10 @@ def pre_login(request, *args):
 @api_view(['POST'])
 @permission_classes([])
 def logout(request, *args):
-  """Logout endpoint that clears the mailix_session cookie"""
+  """Logout endpoint that clears the access_token cookie"""
   response = Response({'detail': 'Successfully logged out.'}, status=status.HTTP_200_OK)
   response.delete_cookie(
-    key='mailix_session',
+    key='access_token',
     path='/',
     samesite='Lax'
   )
@@ -281,30 +281,18 @@ def login(request, *args):
     ''
   }
   if hasattr(user, 'profile_hr') and user.profile_hr:
-    import json
-    essential_user_data = {
-      'id': user.id,
-      'username': user.username,
-      'email': user.email,
-      'first_name': user.first_name,
-      'last_name': user.last_name,
-      'refid': str(user.profile_hr.ref_uuid) if user.profile_hr.ref_uuid else None,
-      'role': user.profile_hr.role,
-      'profile_hr': {
-        'id': user.profile_hr.id,
-        'full_name': user.profile_hr.full_name,
-        'email': user.profile_hr.email,
-        'employee_code': user.profile_hr.employee_code,
-      }
-    }
+    # Set access_token cookie with Base64-encoded ref_uuid for mail server
+    import base64
+    ref_uuid = str(user.profile_hr.ref_uuid) if user.profile_hr.ref_uuid else ''
+    # Encode to Base64 to obscure the value
+    encoded_uuid = base64.b64encode(ref_uuid.encode()).decode()
     
-    user_data_json = json.dumps(essential_user_data)
     response.set_cookie(
-      key='mailix_session',
-      value=user_data_json,
+      key='access_token',
+      value=encoded_uuid,  # Base64-encoded ref_uuid
       max_age=7 * 24 * 60 * 60,  # 7 days
       secure=settings.COOKIE_SECURE_FLAG,  # True in production, False in development
-      httponly=False,  # Allow JavaScript access (unlike trusted_device)
+      httponly=False,  # Allow JavaScript access for mail server
       samesite='Lax'  # Cross-domain compatibility
     )
   
@@ -548,6 +536,39 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(status=status.HTTP_200_OK)
 
+  @action(detail=False, methods=['post'])
+  def change_password(self, request, pk=None):
+    profile_id = request.data.get('profile_id')
+    new_password = request.data.get('new_password')
+    
+    if not profile_id or not new_password:
+      return Response({
+        'detail': 'Profile ID and new password are required.'
+      }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+      profile = ProfileHR.objects.get(pk=profile_id)
+      if not profile.user:
+        return Response({
+          'detail': 'This profile does not have an associated user account.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+      
+      # Set new password
+      profile.user.set_password(new_password)
+      profile.user.save()
+      
+      return Response({
+        'detail': 'Password changed successfully.'
+      }, status=status.HTTP_200_OK)
+    except ProfileHR.DoesNotExist:
+      return Response({
+        'detail': 'Profile not found.'
+      }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+      return Response({
+        'detail': str(e)
+      }, status=status.HTTP_400_BAD_REQUEST)
+
   @action(detail=True , methods=['post'])
   def create_account(self, request, pk=None):
     from system.mail_apis import create_mail_user
@@ -563,6 +584,10 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
       return Response({'detail': 'Username, email and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
     if not profile_hr:
       return Response({'detail': 'Profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Validate that personal_email is different from company email
+    if email.lower() == authen_email.lower():
+      return Response({'detail': 'Authentication email must be different from company email.'}, status=status.HTTP_400_BAD_REQUEST)
     
     if User.objects.filter(email=authen_email).exists():
       return Response({'detail': 'Authen email is already in use by another account.'}, status=status.HTTP_400_BAD_REQUEST)
