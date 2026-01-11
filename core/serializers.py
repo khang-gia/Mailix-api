@@ -514,12 +514,51 @@ class WorkHistorySerializer(serializers.ModelSerializer):
             
         return []
 
+# Attachment Serializers
+class WorkCommentAttachmentSerializer(serializers.ModelSerializer):
+    file = serializers.SerializerMethodField(read_only=True)
+    
+    class Meta:
+        model = WorkCommentAttachment
+        fields = ['id', 'file', 'filename', 'file_type', 'uploaded_at']
+        read_only_fields = ['id', 'uploaded_at']
+    
+    def get_file(self, obj):
+        request = self.context.get('request')
+        if obj.file:
+            file_url = obj.file.url
+            if request is not None:
+                return request.build_absolute_uri(file_url)
+            return file_url
+        return None
+
+class CustomerCommentAttachmentSerializer(serializers.ModelSerializer):
+    file = serializers.SerializerMethodField(read_only=True)
+    
+    class Meta:
+        model = CustomerCommentAttachment
+        fields = ['id', 'file', 'filename', 'file_type', 'uploaded_at']
+        read_only_fields = ['id', 'uploaded_at']
+    
+    def get_file(self, obj):
+        request = self.context.get('request')
+        if obj.file:
+            file_url = obj.file.url
+            if request is not None:
+                return request.build_absolute_uri(file_url)
+            return file_url
+        return None
+
 class WorkCommentSerializer(serializers.ModelSerializer):
   
     user = serializers.SerializerMethodField()
     likes = UserListSerializer(read_only=True, many=True)
     like_count = serializers.SerializerMethodField()
     is_liked_by_you = serializers.SerializerMethodField()
+    replies = serializers.SerializerMethodField()
+    reply_count = serializers.SerializerMethodField()
+    attachment = serializers.SerializerMethodField()
+    
     class Meta:
         model = WorkComment
         fields = '__all__'
@@ -536,12 +575,59 @@ class WorkCommentSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return obj.likes.filter(id=request.user.id).exists()
         return False
+    
+    def get_replies(self, obj):
+        """Get replies only for top-level comments (1-level nesting only)"""
+        if obj.parent is None:
+            replies = obj.replies.filter(deleted_at__isnull=True).order_by('created_at')
+            return WorkCommentSerializer(replies, many=True, context=self.context).data
+        return []
+    
+    def get_reply_count(self, obj):
+        """Get reply count only for top-level comments"""
+        if obj.parent is None:
+            return obj.replies.filter(deleted_at__isnull=True).count()
+        return 0
+    
+    def get_attachment(self, obj):
+        """Get attachment if exists"""
+        try:
+            if hasattr(obj, 'attachment') and obj.attachment:
+                return WorkCommentAttachmentSerializer(obj.attachment, context=self.context).data
+        except WorkCommentAttachment.DoesNotExist:
+            pass
+        return None
 
 class WorkCommentCreateSerializer(serializers.ModelSerializer):
+  
+  attachment = serializers.FileField(required=False, write_only=True)
+  text = serializers.CharField(required=False, allow_blank=True)
   
   class Meta:
         model = WorkComment
         exclude = ['likes',]
+  
+  def validate(self, data):
+      # Ensure at least one of text or attachment is provided
+      if not data.get('text') and not data.get('attachment'):
+          raise serializers.ValidationError("Either text or attachment must be provided.")
+      return data
+  
+  def create(self, validated_data):
+      # Extract attachment file if present
+      attachment_file = validated_data.pop('attachment', None)
+      
+      # Create the comment
+      comment = WorkComment.objects.create(**validated_data)
+      
+      # Create attachment if file was provided
+      if attachment_file:
+          WorkCommentAttachment.objects.create(
+              comment=comment,
+              file=attachment_file
+          )
+      
+      return comment
 
 class CustomerHistorySerializer(serializers.ModelSerializer):
     curators = UserListSerializer(read_only=True, many=True)
@@ -608,6 +694,10 @@ class CustomerCommentSerializer(serializers.ModelSerializer):
     likes = UserListSerializer(read_only=True, many=True)
     like_count = serializers.SerializerMethodField()
     is_liked_by_you = serializers.SerializerMethodField()
+    replies = serializers.SerializerMethodField()
+    reply_count = serializers.SerializerMethodField()
+    attachment = serializers.SerializerMethodField()
+    
     class Meta:
         model = CustomerComment
         fields = '__all__'
@@ -624,9 +714,56 @@ class CustomerCommentSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return obj.likes.filter(id=request.user.id).exists()
         return False
+    
+    def get_replies(self, obj):
+        """Get replies only for top-level comments (1-level nesting only)"""
+        if obj.parent is None:
+            replies = obj.customer_replies.filter(deleted_at__isnull=True).order_by('created_at')
+            return CustomerCommentSerializer(replies, many=True, context=self.context).data
+        return []
+    
+    def get_reply_count(self, obj):
+        """Get reply count only for top-level comments"""
+        if obj.parent is None:
+            return obj.customer_replies.filter(deleted_at__isnull=True).count()
+        return 0
+    
+    def get_attachment(self, obj):
+        """Get attachment if exists"""
+        try:
+            if hasattr(obj, 'attachment') and obj.attachment:
+                return CustomerCommentAttachmentSerializer(obj.attachment, context=self.context).data
+        except CustomerCommentAttachment.DoesNotExist:
+            pass
+        return None
 
 class CustomerCommentCreateSerializer(serializers.ModelSerializer):
+  
+  attachment = serializers.FileField(required=False, write_only=True)
+  text = serializers.CharField(required=False, allow_blank=True)
   
   class Meta:
         model = CustomerComment
         exclude = ['likes',]
+  
+  def validate(self, data):
+      # Ensure at least one of text or attachment is provided
+      if not data.get('text') and not data.get('attachment'):
+          raise serializers.ValidationError("Either text or attachment must be provided.")
+      return data
+  
+  def create(self, validated_data):
+      # Extract attachment file if present
+      attachment_file = validated_data.pop('attachment', None)
+      
+      # Create the comment
+      comment = CustomerComment.objects.create(**validated_data)
+      
+      # Create attachment if file was provided
+      if attachment_file:
+          CustomerCommentAttachment.objects.create(
+              comment=comment,
+              file=attachment_file
+          )
+      
+      return comment

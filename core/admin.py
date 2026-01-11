@@ -15,6 +15,8 @@ admin.site.register(WorkAttachment)
 admin.site.register(WorkComment)
 admin.site.register(WorkCommentAttachment)
 admin.site.register(CustomerAttachment)
+admin.site.register(CustomerComment)
+admin.site.register(CustomerCommentAttachment)
 @admin.register(ProfileHR)
 class ProfileHRAdmin(admin.ModelAdmin):
   list_display = ('full_name', 'status', 'department', 'direct_manager', 'user', 'email')

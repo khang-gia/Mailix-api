@@ -629,16 +629,28 @@ class CustomerComment(BaseCreateUpdateDeleteModel):
         return "Comment <{}> by {}".format(self.pk, self.user)
 
 class CustomerCommentAttachment(models.Model):
-    comment = models.ForeignKey(
-        'CustomerComment', related_name='attachments', on_delete=models.CASCADE
+    comment = models.OneToOneField(
+        'CustomerComment', related_name='attachment', on_delete=models.CASCADE
     )
-    file = models.FileField(upload_to=comment_attachment_path)
+    file = models.FileField(upload_to='customer_comment_attachments/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     filename = models.CharField(max_length=255, blank=True, null=True)
+    file_type = models.CharField(max_length=50, blank=True, null=True)  # 'image' or 'file'
+    
     def save(self, *args, **kwargs):
         if not self.filename and self.file:
             self.filename = self.file.name
+        
+        # Auto-detect file type based on extension
+        if self.file and not self.file_type:
+            ext = self.filename.split('.')[-1].lower() if self.filename else ''
+            if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
+                self.file_type = 'image'
+            else:
+                self.file_type = 'file'
+        
         super().save(*args, **kwargs)
+    
     def __str__(self):
         return f"Attachment for Comment {self.comment.pk}: {self.filename or 'No Name'}"
 
@@ -768,16 +780,28 @@ class WorkComment(BaseCreateUpdateDeleteModel):
         return f"Comment <{self.pk}> by {self.user}"
 
 class WorkCommentAttachment(models.Model):
-    comment = models.ForeignKey(
-        'WorkComment', related_name='attachments', on_delete=models.CASCADE
+    comment = models.OneToOneField(
+        'WorkComment', related_name='attachment', on_delete=models.CASCADE
     )
     file = models.FileField(upload_to='work_comment_attachments/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     filename = models.CharField(max_length=255, blank=True, null=True)
+    file_type = models.CharField(max_length=50, blank=True, null=True)  # 'image' or 'file'
+    
     def save(self, *args, **kwargs):
         if not self.filename and self.file:
             self.filename = self.file.name
+        
+        # Auto-detect file type based on extension
+        if self.file and not self.file_type:
+            ext = self.filename.split('.')[-1].lower() if self.filename else ''
+            if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
+                self.file_type = 'image'
+            else:
+                self.file_type = 'file'
+        
         super().save(*args, **kwargs)
+    
     def __str__(self):
         return f"Attachment for Comment {self.comment.pk}: {self.filename or 'No Name'}"
 

@@ -1345,6 +1345,17 @@ class WorkCommentViewSet(viewsets.ModelViewSet):
     if self.action == 'list':
       return WorkCommentSerializer
     return WorkCommentCreateSerializer
+  
+  def create(self, request, *args, **kwargs):
+      # Use create serializer for validation/creation
+      serializer = self.get_serializer(data=request.data)
+      serializer.is_valid(raise_exception=True)
+      instance = serializer.save()
+      
+      # Use full serializer for response to include nested data
+      response_serializer = WorkCommentSerializer(instance, context={'request': request})
+      headers = self.get_success_headers(response_serializer.data)
+      return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
   @action(detail=True, methods=['post'])
   def interact(self, request, pk=None):
@@ -1371,6 +1382,17 @@ class CustomerCommentViewSet(viewsets.ModelViewSet):
     if self.action == 'list':
       return CustomerCommentSerializer
     return CustomerCommentCreateSerializer
+  
+  def create(self, request, *args, **kwargs):
+      # Use create serializer for validation/creation
+      serializer = self.get_serializer(data=request.data)
+      serializer.is_valid(raise_exception=True)
+      instance = serializer.save()
+      
+      # Use full serializer for response to include nested data
+      response_serializer = CustomerCommentSerializer(instance, context={'request': request})
+      headers = self.get_success_headers(response_serializer.data)
+      return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
   @action(detail=True, methods=['post'])
   def interact(self, request, pk=None):

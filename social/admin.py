@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import SocialGroup, SocialGroupMember, Post, PollOption, PostInteraction, PollVote
+from .models import SocialGroup, SocialGroupMember, Post, PollOption, PostInteraction, PollVote, PostComment, PostCommentAttachment
 
 
 @admin.register(SocialGroup)
@@ -47,3 +47,17 @@ class PollVoteAdmin(admin.ModelAdmin):
     list_filter = ['created_at']
     search_fields = ['poll_option__option', 'user__username']
     ordering = ['-created_at']
+
+@admin.register(PostComment)
+class PostCommentAdmin(admin.ModelAdmin):
+    list_display = ['id', 'post', 'user', 'text', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['post__title', 'user__username']
+    ordering = ['-created_at']
+
+@admin.register(PostCommentAttachment)
+class PostCommentAttachmentAdmin(admin.ModelAdmin):
+    list_display = ['id', 'comment', 'filename', 'file_type', 'uploaded_at']
+    list_filter = ['file_type', 'uploaded_at']
+    search_fields = ['filename', 'comment__text']
+    ordering = ['-uploaded_at']

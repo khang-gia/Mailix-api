@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import SocialGroup, SocialGroupMember, Post, PollOption, PostInteraction, PollVote, PostComment, PostAttachment
+from .models import SocialGroup, SocialGroupMember, Post, PollOption, PostInteraction, PollVote, PostComment, PostAttachment, PostCommentAttachment
 from core.serializers import UserOtherViewSerializer, UserListSerializer
 
 
@@ -313,11 +313,28 @@ class PollVoteListSerializer(serializers.ModelSerializer):
         model = PollVote
         fields = '__all__'
 
+class PostCommentAttachmentSerializer(serializers.ModelSerializer):
+    file = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = PostCommentAttachment
+        fields = ['id', 'file', 'filename', 'file_type', 'uploaded_at']
+    
+    def get_file(self, obj):
+        request = self.context.get('request')
+        if obj.file and request:
+            return request.build_absolute_uri(obj.file.url)
+        return obj.file.url if obj.file else None
+
 class PostCommentSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
     likes = UserListSerializer(read_only=True, many=True)
     like_count = serializers.SerializerMethodField()
     is_liked_by_you = serializers.SerializerMethodField()
+    attachment = serializers.SerializerMethodField()
+    replies = serializers.SerializerMethodField()
+    reply_count = serializers.SerializerMethodField()
+    
     class Meta:
         model = PostComment
         fields = '__all__'
@@ -334,10 +351,58 @@ class PostCommentSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return obj.likes.filter(id=request.user.id).exists()
         return False
+    
+    def get_attachment(self, obj):
+        try:
+            if hasattr(obj, 'attachment') and obj.attachment:
+                return PostCommentAttachmentSerializer(obj.attachment, context=self.context).data
+        except PostCommentAttachment.DoesNotExist:
+            pass
+        return None
+    
+    def get_replies(self, obj):
+        """Get replies only for top-level comments (1-level nesting only)"""
+        if obj.parent is None:
+            # Only serialize replies for top-level comments
+            replies = obj.comment_replies.filter(deleted_at__isnull=True).order_by('created_at')
+            # Use the same serializer but replies won't have nested replies (parent != None)
+            return PostCommentSerializer(replies, many=True, context=self.context).data
+        return []
+    
+    def get_reply_count(self, obj):
+        """Get reply count only for top-level comments"""
+        if obj.parent is None:
+            return obj.comment_replies.filter(deleted_at__isnull=True).count()
+        return 0
 
 
 class PostCommentCreateSerializer(serializers.ModelSerializer):
   
+  attachment = serializers.FileField(required=False, write_only=True)
+  text = serializers.CharField(required=False, allow_blank=True)
+  
   class Meta:
         model = PostComment
         exclude = ['likes',]
+  
+  def validate(self, data):
+      # Ensure at least one of text or attachment is provided
+      if not data.get('text') and not data.get('attachment'):
+          raise serializers.ValidationError("Either text or attachment must be provided.")
+      return data
+  
+  def create(self, validated_data):
+      # Extract attachment file if present
+      attachment_file = validated_data.pop('attachment', None)
+      
+      # Create the comment
+      comment = PostComment.objects.create(**validated_data)
+      
+      # Create attachment if file was provided
+      if attachment_file:
+          PostCommentAttachment.objects.create(
+              comment=comment,
+              file=attachment_file
+          )
+      
+      return comment

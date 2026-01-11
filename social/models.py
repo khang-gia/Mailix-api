@@ -136,6 +136,32 @@ class PostComment(BaseCreateUpdateDeleteModel):
     def __str__(self):
         return "PostComment <{}> by {}".format(self.post, self.user)
 
+class PostCommentAttachment(models.Model):
+    comment = models.OneToOneField(
+        'PostComment', related_name='attachment', on_delete=models.CASCADE
+    )
+    file = models.FileField(upload_to='post_comment_attachments/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    filename = models.CharField(max_length=255, blank=True, null=True)
+    file_type = models.CharField(max_length=50, blank=True, null=True)  # 'image' or 'file'
+    
+    def save(self, *args, **kwargs):
+        if not self.filename and self.file:
+            self.filename = self.file.name
+        
+        # Auto-detect file type based on extension
+        if self.file and not self.file_type:
+            ext = self.filename.split('.')[-1].lower() if self.filename else ''
+            if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
+                self.file_type = 'image'
+            else:
+                self.file_type = 'file'
+        
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Attachment for Comment {self.comment.pk}: {self.filename or 'No Name'}"
+
 @receiver(signal=post_save, sender=PostComment)
 def count_post_comments(sender, instance, created, **kwargs):
     if created:
