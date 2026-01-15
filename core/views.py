@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR, Title, Customer, Works, WorkComment, CustomerComment, CustomerAttachment
+from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR, Title, Customer, Works, WorkComment, CustomerComment, CustomerAttachment, WorkAttachment
 # Create your views here.
 from rest_framework.response import Response
 from rest_framework import status
@@ -8,7 +8,7 @@ from .serializers import UserSerializer, ProfileSerializer, LoginSerializer, Sys
   CredentialsSerializer, ProfileHRListSerializer, ProfileHRDetailSerializer, ProfileHRSerializer, UserListSerializer, TitleSerializer, TitleListSerializer, UsernameSerializer, \
     OTPSerializer, CustomerSerializer, CustomerListSerializer, CustomerDetailSerializer, WorkSerializer, WorkListSerializer, WorkDetailSerializer, WorkHistorySerializer, \
       WorkCommentSerializer, WorkCommentCreateSerializer, CustomerCommentSerializer, CustomerCommentCreateSerializer, CustomerHistorySerializer, CustomerAttachmentSerializer, \
-        CustomerAttachmentListSerializer
+        CustomerAttachmentListSerializer, WorkAttachmentSerializer, WorkAttachmentListSerializer
 from django_filters.rest_framework import FilterSet
 import django_filters
 from django.db.models import Q, Count
@@ -1106,6 +1106,23 @@ class CustomerAttachmentViewSet(viewsets.ModelViewSet):
     if self.action == 'list':
       return CustomerAttachmentListSerializer
     return CustomerAttachmentSerializer
+
+class WorkAttachmentFilter(FilterSet):
+  class Meta:
+    model = WorkAttachment
+    fields = ['work']
+
+class WorkAttachmentViewSet(viewsets.ModelViewSet):
+  queryset = WorkAttachment.objects.all()
+  serializer_class = WorkAttachmentSerializer
+  filterset_class = WorkAttachmentFilter
+  ordering_fields = ['id']
+  ordering = ('-id',)
+
+  def get_serializer_class(self):
+    if self.action == 'list':
+      return WorkAttachmentListSerializer
+    return WorkAttachmentSerializer
 
 class WorkFilter(FilterSet):
   search = django_filters.CharFilter(method='elastic_search')

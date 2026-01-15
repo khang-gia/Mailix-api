@@ -315,6 +315,8 @@ class ProfileHR(BaseCreateUpdateDeleteModel):
     public_name = models.CharField('Bút danh', max_length=50, null=True, blank=True)
     # status = models.CharField('Status', choices=PROFILE_STATUSES, default='Active', max_length=100, null=True, blank=True)
     status = models.IntegerField('Status', choices=PROFILE_STATUSES, default=0, null=True, blank=True, db_index=True)
+    status_start_date = models.DateField('Status Start Date', null=True, blank=True, help_text='Date when current status begins')
+    status_end_date = models.DateField('Status End Date', null=True, blank=True, help_text='Date when current status ends (for temporary absent)')
     account_status = models.IntegerField('Account Status', choices=ACCOUNT_STATUSES, default=0, null=True, blank=True, db_index=True)
     group = models.ForeignKey('system.SystemGroup',  on_delete=models.SET_NULL, related_name="profile_hrs", null=True, blank=True)
     is_first_login = models.BooleanField('Is First Login', default=True)
@@ -758,7 +760,7 @@ class WorkAttachment(BaseCreateUpdateDeleteModel):
     work = models.ForeignKey(Works, related_name='attachments', on_delete=models.CASCADE, db_index=True)
     file = models.FileField(upload_to='work_attachments/')
     filename = models.CharField(max_length=255, blank=True, null=True)
-
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     def save(self, *args, **kwargs):
         if not self.filename and self.file:
             self.filename = self.file.name
