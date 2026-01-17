@@ -139,7 +139,7 @@ class PollOptionSerializer(serializers.ModelSerializer):
 
     def get_poll_vote_users(self, obj):
         return obj.poll_votes.values_list('user', flat=True)
-class PollOptionDetailSerializer(serializers.ModelSerializer):
+class PollOptionsGeneralSerializer(serializers.ModelSerializer):
     votes_count = serializers.IntegerField(read_only=True)
     has_voted = serializers.SerializerMethodField()
     
@@ -152,7 +152,26 @@ class PollOptionDetailSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return obj.poll_votes.filter(user=request.user).exists()
         return False
+class PollVoteUserOnlySerializer(serializers.ModelSerializer):
+    """Serializer for poll votes with only user information (no poll option details)"""
+    user = UserOtherViewSerializer(read_only=True)
+    
+    class Meta:
+        model = PollVote
+        fields = ['id', 'user', 'created_at']
 
+
+class PollOptionDetailSerializer(serializers.ModelSerializer):
+    poll_votes = PollVoteUserOnlySerializer(many=True, read_only=True)
+    votes_count = serializers.IntegerField(read_only=True)
+    
+    class Meta:
+        model = PollOption
+        fields = '__all__'
+
+    # def get_poll_votes(self, obj):
+    #     # Return poll votes with only user information (no circular poll option reference)
+    #     return PollVoteUserOnlySerializer(obj.poll_votes.all(), many=True, context=self.context).data
 
 class PostSerializer(serializers.ModelSerializer):
     class Meta:
@@ -244,7 +263,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
     author = UserOtherViewSerializer(read_only=True)
     social_group = SocialGroupListSerializer(read_only=True)
     post_type_display = serializers.CharField(source='get_post_type_display', read_only=True)
-    poll_options = PollOptionDetailSerializer(many=True, read_only=True)
+    poll_options = PollOptionsGeneralSerializer(many=True, read_only=True)
     image = serializers.SerializerMethodField(read_only=True)
     file = serializers.SerializerMethodField(read_only=True)
     user_interaction = serializers.SerializerMethodField()

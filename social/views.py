@@ -501,6 +501,19 @@ class PostViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+    @action(detail=True, methods=['get'])
+    def voters(self, request, pk=None):
+        """Get all poll options with their voters for a poll post"""
+        post = self.get_object()
+        
+        if post.post_type != 2:
+            return Response({'detail': 'This post is not a poll.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get all poll options for this post with their votes
+        poll_options = post.poll_options.all()
+        serializer = PollOptionDetailSerializer(poll_options, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 class PostCommentViewSet(viewsets.ModelViewSet):
   queryset = PostComment.objects.all()
   serializer_class = PostCommentSerializer
