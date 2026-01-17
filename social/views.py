@@ -390,9 +390,29 @@ class PostViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'])
     def interactions(self, request, pk=None):
-        """Get all interactions on a post"""
+        """Get all interactions on a post with pagination"""
+        from rest_framework.pagination import PageNumberPagination
+        
         post = self.get_object()
         interactions = post.interactions.all()
+        
+        # Filter by interaction_type if provided
+        interaction_type = request.query_params.get('interaction_type')
+        if interaction_type:
+            interactions = interactions.filter(interaction_type=interaction_type)
+        
+        # Apply pagination
+        paginator = PageNumberPagination()
+        paginator.page_size = 20  # Default page size
+        paginator.page_size_query_param = 'page_size'  # Allow client to control page size
+        paginator.max_page_size = 100  # Maximum allowed page size
+        page = paginator.paginate_queryset(interactions, request)
+        
+        if page is not None:
+            serializer = PostInteractionListSerializer(page, many=True, context={'request': request})
+            return paginator.get_paginated_response(serializer.data)
+        
+        # Fallback if pagination fails
         serializer = PostInteractionListSerializer(interactions, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
     
