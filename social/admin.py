@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import SocialGroup, SocialGroupMember, Post, PollOption, PostInteraction, PollVote, PostComment, PostCommentAttachment
+from .models import SocialGroup, SocialGroupMember, Post, PollOption, PostInteraction, PollVote, PostComment, PostCommentAttachment, PostAttachment
 
 
 @admin.register(SocialGroup)
@@ -61,3 +61,5 @@ class PostCommentAttachmentAdmin(admin.ModelAdmin):
     list_filter = ['file_type', 'uploaded_at']
     search_fields = ['filename', 'comment__text']
     ordering = ['-uploaded_at']
+
+admin.site.register(PostAttachment)
