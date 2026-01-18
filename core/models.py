@@ -602,7 +602,9 @@ class CustomerAttachment(BaseCreateUpdateDeleteModel):
     customer = models.ForeignKey(Customer,related_name='attachments', on_delete=models.CASCADE)
     file = models.FileField(upload_to=customer_attachment_path)
     filename = models.CharField(max_length=255, blank=True, null=True)
-    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)    
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    historical = HistoricalRecords()
+    
     def save(self, *args, **kwargs):
         # Call parent save first to let Django process the upload_to function
         super().save(*args, **kwargs)
@@ -761,6 +763,8 @@ class WorkAttachment(BaseCreateUpdateDeleteModel):
     file = models.FileField(upload_to='work_attachments/')
     filename = models.CharField(max_length=255, blank=True, null=True)
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    historical = HistoricalRecords()
+    
     def save(self, *args, **kwargs):
         if not self.filename and self.file:
             self.filename = self.file.name

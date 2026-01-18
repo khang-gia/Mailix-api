@@ -1079,7 +1079,44 @@ class CustomerViewSet(viewsets.ModelViewSet):
       serializer = CustomerHistorySerializer(model, customers_history, many=True)
       serializer.is_valid()
 
-      return Response(serializer.data, status=status.HTTP_200_OK)
+      # Get attachment history
+      from .models import CustomerAttachment
+      attachment_history = CustomerAttachment.historical.filter(customer_id=pk).order_by('-history_date')
+      
+      # Process attachment history to create simple history entries
+      attachment_events = []
+      for hist in attachment_history:
+          # Determine if it's an upload (created) or delete (deleted)
+          if hist.history_type == '+':
+              action = 'uploaded'
+          elif hist.history_type == '-':
+              action = 'deleted'
+          else:
+              continue  # Skip updates for now
+          
+          # Get filename, fallback to extracting from file path if filename is null
+          import os
+          filename = hist.filename
+          if not filename and hist.file:
+              filename = os.path.basename(hist.file)
+          
+          attachment_events.append({
+              'id': f'attachment-{hist.history_id}',
+              'type': 'attachment',
+              'action': action,
+              'filename': filename or 'Unknown file',
+              'user': {
+                  'id': hist.history_user.id if hist.history_user else None,
+                  'display_name': hist.history_user.get_full_name() or hist.history_user.username if hist.history_user else 'Unknown'
+              },
+              'created_at': hist.history_date.isoformat()
+          })
+      
+      # Combine and sort by date
+      combined_history = list(serializer.data) + attachment_events
+      combined_history.sort(key=lambda x: x.get('created_at') or x.get('history_date'), reverse=True)
+      
+      return Response(combined_history, status=status.HTTP_200_OK)
 
 
   @action(detail=True, methods=['get'])
@@ -1340,7 +1377,44 @@ class WorkViewSet(viewsets.ModelViewSet):
       serializer = WorkHistorySerializer(model, works_history, many=True)
       serializer.is_valid()
 
-      return Response(serializer.data, status=status.HTTP_200_OK)
+      # Get attachment history
+      from .models import WorkAttachment
+      attachment_history = WorkAttachment.historical.filter(work_id=pk).order_by('-history_date')
+      
+      # Process attachment history to create simple history entries
+      import os
+      attachment_events = []
+      for hist in attachment_history:
+          # Determine if it's an upload (created) or delete (deleted)
+          if hist.history_type == '+':
+              action = 'uploaded'
+          elif hist.history_type == '-':
+              action = 'deleted'
+          else:
+              continue  # Skip updates for now
+          
+          # Get filename, fallback to extracting from file path if filename is null
+          filename = hist.filename
+          if not filename and hist.file:
+              filename = os.path.basename(hist.file)
+          
+          attachment_events.append({
+              'id': f'attachment-{hist.history_id}',
+              'type': 'attachment',
+              'action': action,
+              'filename': filename or 'Unknown file',
+              'user': {
+                  'id': hist.history_user.id if hist.history_user else None,
+                  'display_name': hist.history_user.get_full_name() or hist.history_user.username if hist.history_user else 'Unknown'
+              },
+              'created_at': hist.history_date.isoformat()
+          })
+      
+      # Combine and sort by date
+      combined_history = list(serializer.data) + attachment_events
+      combined_history.sort(key=lambda x: x.get('created_at') or x.get('history_date'), reverse=True)
+      
+      return Response(combined_history, status=status.HTTP_200_OK)
 
 
   @action(detail=True, methods=['get'])
