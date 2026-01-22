@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import SocialGroup, SocialGroupMember, Post, PollOption, PostInteraction, PollVote, PostComment, PostAttachment, PostCommentAttachment
+from django.db import models
+from .models import SocialGroup, SocialGroupMember, Post, PollOption, PostInteraction, PollVote, PostComment, PostAttachment, PostCommentAttachment, UserSocialProfile, Friendship
 from core.serializers import UserOtherViewSerializer, UserListSerializer
 
 
@@ -425,3 +426,63 @@ class PostCommentCreateSerializer(serializers.ModelSerializer):
           )
       
       return comment
+
+class UserSocialProfileSerializer(serializers.ModelSerializer):
+    """Serializer for user social profile with privacy-aware field display"""
+    user = UserOtherViewSerializer(read_only=True)
+    avatar_url = serializers.SerializerMethodField(read_only=True)
+    cover_photo_url = serializers.SerializerMethodField(read_only=True)
+    post_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = UserSocialProfile
+        fields = ['id', 'user', 'bio', 'avatar', 'avatar_url', 'cover_photo', 'cover_photo_url', 'location', 'education', 'website',
+                  'bio_privacy', 'location_privacy', 'education_privacy', 'website_privacy',
+                  'post_count', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'avatar_url', 'cover_photo_url', 'created_at', 'updated_at']
+        extra_kwargs = {
+            'avatar': {'write_only': True, 'required': False},
+            'cover_photo': {'write_only': True, 'required': False}
+        }
+    
+    def get_avatar_url(self, obj):
+        request = self.context.get('request')
+        if obj.avatar:
+            photo_url = obj.avatar.url
+            if request is not None:
+                return request.build_absolute_uri(photo_url)
+            return photo_url
+        return None
+    
+    def get_cover_photo_url(self, obj):
+        request = self.context.get('request')
+        if obj.cover_photo:
+            photo_url = obj.cover_photo.url
+            if request is not None:
+                return request.build_absolute_uri(photo_url)
+            return photo_url
+        return None
+    
+    def get_post_count(self, obj):
+        return Post.objects.filter(author=obj.user).count()
+    
+    def to_representation(self, instance):
+        """Override to return avatar_url as avatar and cover_photo_url as cover_photo for backward compatibility"""
+        data = super().to_representation(instance)
+        # Replace URL fields with simpler names in response
+        if 'avatar_url' in data:
+            data['avatar'] = data.pop('avatar_url')
+        if 'cover_photo_url' in data:
+            data['cover_photo'] = data.pop('cover_photo_url')
+        return data
+
+
+class FriendshipSerializer(serializers.ModelSerializer):
+    """Serializer for friendship relationships"""
+    from_user = UserOtherViewSerializer(read_only=True)
+    to_user = UserOtherViewSerializer(read_only=True)
+    
+    class Meta:
+        model = Friendship
+        fields = ['id', 'from_user', 'to_user', 'status', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']

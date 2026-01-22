@@ -183,4 +183,54 @@ class PostAttachment(BaseCreateUpdateDeleteModel):
     
     def __str__(self):
         return f"Attachment {self.file_name} for Post {self.post.id}"
-        
+
+PRIVACY_CHOICES = (
+    (1, 'Public'),
+    (2, 'Friends Only'),
+    (3, 'Only Me')
+)
+
+class UserSocialProfile(BaseCreateUpdateDeleteModel):
+    """Social profile for users - stores bio, cover photo, and other wall-specific information"""
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='social_profile')
+    bio = models.TextField('Bio/About', blank=True, null=True)
+    avatar = models.ImageField(upload_to='social_avatars/', blank=True, null=True)
+    cover_photo = models.ImageField(upload_to='social_covers/', blank=True, null=True)
+    location = models.CharField('Location', max_length=255, blank=True, null=True)
+    education = models.TextField('Education', blank=True, null=True)
+    website = models.URLField('Website', blank=True, null=True)
+    
+    # Privacy settings for profile fields
+    bio_privacy = models.IntegerField('Bio Privacy', choices=PRIVACY_CHOICES, default=1)
+    location_privacy = models.IntegerField('Location Privacy', choices=PRIVACY_CHOICES, default=1)
+    education_privacy = models.IntegerField('Education Privacy', choices=PRIVACY_CHOICES, default=1)
+    website_privacy = models.IntegerField('Website Privacy', choices=PRIVACY_CHOICES, default=1)
+    
+    historical = HistoricalRecords()
+    
+    def __str__(self):
+        return f"Social Profile for {self.user.username}"
+    
+    class Meta:
+        verbose_name = 'User Social Profile'
+        verbose_name_plural = 'User Social Profiles'
+
+class Friendship(BaseCreateUpdateDeleteModel):
+    """Friendship relationship between users"""
+    from_user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='friendships_sent')
+    to_user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='friendships_received')
+    status = models.IntegerField('Status', choices=(
+        (1, 'Pending'),
+        (2, 'Accepted'),
+        (3, 'Rejected'),
+        (4, 'Blocked')
+    ), default=1)
+    historical = HistoricalRecords()
+    
+    def __str__(self):
+        return f"{self.from_user.username} -> {self.to_user.username} ({self.get_status_display()})"
+    
+    class Meta:
+        unique_together = ('from_user', 'to_user')
+        verbose_name = 'Friendship'
+        verbose_name_plural = 'Friendships'

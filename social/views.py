@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, parsers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -8,14 +8,16 @@ import django_filters
 from django.db.models import Q, F
 from django.utils import timezone
 
-from .models import SocialGroup, SocialGroupMember, Post, PollOption, PostInteraction, PollVote, PostComment
+
+from .models import SocialGroup, SocialGroupMember, Post, PollOption, PostInteraction, PollVote, PostComment, UserSocialProfile, Friendship
 from .serializers import (
     SocialGroupSerializer, SocialGroupListSerializer, SocialGroupDetailSerializer,
     SocialGroupMemberSerializer, SocialGroupMemberListSerializer,
     PostSerializer, PostListSerializer, PostDetailSerializer, PostCreateSerializer,
     PollOptionSerializer, PollOptionDetailSerializer,
     PostInteractionSerializer, PostInteractionListSerializer,
-    PollVoteSerializer, PollVoteListSerializer, PostCommentSerializer,  PostCommentCreateSerializer
+    PollVoteSerializer, PollVoteListSerializer, PostCommentSerializer, PostCommentCreateSerializer,
+    UserSocialProfileSerializer, FriendshipSerializer
 )
 
 
@@ -575,3 +577,76 @@ class PollVoteViewSet(viewsets.ReadOnlyModelViewSet):
         if self.action == 'list':
             return PollVoteListSerializer
         return PollVoteSerializer
+
+
+class UserSocialProfileViewSet(viewsets.ModelViewSet):
+    """ViewSet for user social profiles"""
+    queryset = UserSocialProfile.objects.all()
+    serializer_class = UserSocialProfileSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
+    
+    def get_queryset(self):
+        """Filter profiles based on user permissions"""
+        return UserSocialProfile.objects.select_related('user').all()
+    
+    def retrieve(self, request, *args, **kwargs):
+        """Get user profile by user ID"""
+        user_id = kwargs.get('pk')
+        try:
+            profile = UserSocialProfile.objects.get(user_id=user_id)
+        except UserSocialProfile.DoesNotExist:
+            # Auto-create profile if doesn't exist
+            from django.contrib.auth.models import User
+            user = User.objects.get(id=user_id)
+            profile = UserSocialProfile.objects.create(user=user)
+        
+        serializer = self.get_serializer(profile)
+        return Response(serializer.data)
+    
+    def update(self, request, *args, **kwargs):
+        """Update user profile - only allow users to update their own profile"""
+        user_id = kwargs.get('pk')
+        if request.user.id != int(user_id):
+            return Response(
+                {'error': 'You can only update your own profile'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            profile = UserSocialProfile.objects.get(user_id=user_id)
+        except UserSocialProfile.DoesNotExist:
+            profile = UserSocialProfile.objects.create(user=request.user)
+        
+        serializer = self.get_serializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def posts(self, request, pk=None):
+        """Get user's posts with privacy filtering"""
+        user_id = pk
+        requesting_user = request.user
+        
+        # Check if users are friends
+        are_friends = Friendship.objects.filter(
+            Q(from_user_id=requesting_user.id, to_user_id=user_id, status=2) |
+            Q(from_user_id=user_id, to_user_id=requesting_user.id, status=2)
+        ).exists()
+        
+        # Filter posts based on privacy
+        posts = Post.objects.filter(author_id=user_id)
+        
+        if requesting_user.id != int(user_id):
+            # Not viewing own profile
+            if are_friends:
+                # Show public and friends-only posts
+                posts = posts.filter(privacy__in=[1, 2])
+            else:
+                # Show only public posts
+                posts = posts.filter(privacy=1)
+        
+        posts = posts.order_by('-created_at')
+        serializer = PostListSerializer(posts, many=True, context={'request': request})
+        return Response(serializer.data)

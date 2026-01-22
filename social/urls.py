@@ -6,7 +6,8 @@ from .views import (
     PostViewSet,
     PostInteractionViewSet,
     PollVoteViewSet,
-    PostCommentViewSet
+    PostCommentViewSet,
+    UserSocialProfileViewSet
 )
 
 router = DefaultRouter()
@@ -16,6 +17,7 @@ router.register(r'posts', PostViewSet, basename='post')
 router.register(r'interactions', PostInteractionViewSet, basename='postinteraction')
 router.register(r'votes', PollVoteViewSet, basename='pollvote')
 router.register(r'post_comments', PostCommentViewSet, basename='postcomment')
+router.register(r'profiles', UserSocialProfileViewSet, basename='profiles')
 urlpatterns = [
     path('', include(router.urls)),
 ]

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import SocialGroup, SocialGroupMember, Post, PollOption, PostInteraction, PollVote, PostComment, PostCommentAttachment, PostAttachment
+from .models import SocialGroup, SocialGroupMember, Post, PollOption, PostInteraction, PollVote, PostComment, PostCommentAttachment, PostAttachment, UserSocialProfile
 
 
 @admin.register(SocialGroup)
@@ -63,3 +63,4 @@ class PostCommentAttachmentAdmin(admin.ModelAdmin):
     ordering = ['-uploaded_at']
 
 admin.site.register(PostAttachment)
+admin.site.register(UserSocialProfile)
