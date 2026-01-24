@@ -43,10 +43,31 @@ def process_post_creation(post_id, poll_options=None, delay_seconds=0):
             logger.info(f'Created {len(poll_options)} poll options for post {post_id}')
         
         # Update status from 'Posting' (2) to 'Published' (3)
+        # Update status from 'Posting' (2) to 'Published' (3) or 'Pending' (6)
         if post.status == 2:  # Posting
-            post.status = 3  # Published
+            new_status = 3  # Default to Published
+            
+            # Check if post is in a group and user is not admin
+            if post.social_group:
+                from .models import SocialGroupMember
+                try:
+                    member = SocialGroupMember.objects.get(
+                        social_group=post.social_group,
+                        user=post.author
+                    )
+                    # If not admin (role 1), set to Pending (6)
+                    if member.role != 1:
+                        new_status = 6
+                        logger.info(f'Post {post_id} marked as Pending (non-admin author)')
+                except SocialGroupMember.DoesNotExist:
+                    # Not a member? Should not happen usually, but default to Pending to be safe?
+                    # Or allow if permissions allowed creation?
+                    # Let's keep Published as fallback if membership check fails (e.g. author left?)
+                    pass
+            
+            post.status = new_status
             post.save(update_fields=['status'])
-            logger.info(f'Post {post_id} status updated to Published')
+            logger.info(f'Post {post_id} status updated to {new_status}')
         
         # Future: Add more post-processing here
         # - Send notifications to group members

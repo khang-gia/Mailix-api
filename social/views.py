@@ -298,13 +298,75 @@ class PostViewSet(viewsets.ModelViewSet):
         return queryset
     
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action in ['list', 'list_pending']:
             return PostListSerializer
         elif self.action == 'retrieve':
             return PostDetailSerializer
         elif self.action in ['create', 'update', 'partial_update']:
             return PostCreateSerializer
         return PostSerializer
+
+    @action(detail=False, methods=['get'], url_path='pending')
+    def list_pending(self, request):
+        """List pending posts in groups where the user is an admin"""
+        from .models import SocialGroupMember
+        
+        user = request.user
+        # Find groups where user is admin (role=1)
+        admin_groups = SocialGroupMember.objects.filter(user=user, role=1).values_list('social_group_id', flat=True)
+        
+        pending_posts = Post.objects.filter(
+            social_group__in=admin_groups,
+            status=6 # Pending
+        ).order_by('-created_at')
+        
+        page = self.paginate_queryset(pending_posts)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+            
+        serializer = self.get_serializer(pending_posts, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        post = self.get_object()
+        if not post.social_group:
+             return Response({'error': 'Post not in a group'}, status=400)
+             
+        from .models import SocialGroupMember
+        is_admin = SocialGroupMember.objects.filter(
+            social_group=post.social_group, 
+            user=request.user, 
+            role=1
+        ).exists()
+        
+        if not is_admin:
+            return Response({'error': 'Permission denied'}, status=403)
+            
+        post.status = 3 # Published
+        post.save(update_fields=['status'])
+        return Response({'status': 'approved'})
+
+    @action(detail=True, methods=['post'])
+    def deny(self, request, pk=None):
+        post = self.get_object()
+        if not post.social_group:
+             return Response({'error': 'Post not in a group'}, status=400)
+             
+        from .models import SocialGroupMember
+        is_admin = SocialGroupMember.objects.filter(
+            social_group=post.social_group, 
+            user=request.user, 
+            role=1
+        ).exists()
+        
+        if not is_admin:
+            return Response({'error': 'Permission denied'}, status=403)
+            
+        post.status = 7 # Denied
+        post.save(update_fields=['status'])
+        return Response({'status': 'denied'})
     
     def perform_create(self, serializer):
         """Set the author to the current user and handle file attachments"""

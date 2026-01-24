@@ -44,7 +44,9 @@ POST_STATUSES = (
     (2, 'Posting'),
     (3, 'Published'),
     (4, 'Deleted'),
-    (5, 'Hidden')
+    (5, 'Hidden'),
+    (6, 'Pending'),
+    (7, 'Denied')
 )
 class Post(BaseCreateUpdateDeleteModel):
     social_group = models.ForeignKey('SocialGroup', on_delete=models.SET_NULL, null=True, blank=True, related_name='posts', db_index=True)
