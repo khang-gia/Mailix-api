@@ -95,12 +95,21 @@ class UserOtherViewSerializer(serializers.ModelSerializer):
 
     def get_avatar(self, obj):
       request = self.context.get('request')
+      
+      # Priority 1: Check for social profile avatar
+      if hasattr(obj, 'social_profile') and obj.social_profile and obj.social_profile.avatar:
+        avatar_url = obj.social_profile.avatar.url
+        if request is not None:
+          return request.build_absolute_uri(avatar_url)
+        return avatar_url
+      
+      # Priority 2: Fall back to HR profile avatar
       if hasattr(obj, 'profile_hr') and obj.profile_hr and obj.profile_hr.avatar:
         avatar_url = obj.profile_hr.avatar.url
         if request is not None:
           return request.build_absolute_uri(avatar_url)
-
         return avatar_url
+        
       return None 
 
 

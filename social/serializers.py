@@ -186,6 +186,8 @@ class PostCreateSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=False
     )
+    attachments = PostAttachmentSerializer(many=True, read_only=True)
+    author = UserOtherViewSerializer(read_only=True)
     
     class Meta:
         model = Post

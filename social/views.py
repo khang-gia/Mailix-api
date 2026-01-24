@@ -326,6 +326,41 @@ class PostViewSet(viewsets.ModelViewSet):
             )
         
         return post
+
+    def perform_update(self, serializer):
+        """Handle file attachments during update"""
+        from .models import PostAttachment
+        
+        post = serializer.save()
+        
+        # Handle deletions
+        if hasattr(self.request.data, 'getlist'):
+            attachments_to_delete = self.request.data.getlist('attachments_to_delete')
+        else:
+            attachments_to_delete = self.request.data.get('attachments_to_delete')
+            if not isinstance(attachments_to_delete, list) and attachments_to_delete:
+                attachments_to_delete = [attachments_to_delete]
+            elif not attachments_to_delete:
+                attachments_to_delete = []
+        if attachments_to_delete:
+            PostAttachment.objects.filter(id__in=attachments_to_delete, post=post).delete()
+        
+        # Handle multiple file uploads (add new files)
+        files = self.request.FILES.getlist('attachments')
+        if files:
+            # Get current attachment count to determine order
+            current_count = post.attachments.count()
+            
+            for index, file in enumerate(files):
+                file_type = self.get_file_type(file.content_type)
+                PostAttachment.objects.create(
+                    post=post,
+                    file=file,
+                    file_type=file_type,
+                    file_name=file.name,
+                    file_size=file.size,
+                    order=current_count + index + 1
+                )
     
     def get_file_type(self, content_type):
         """Determine file type based on content type"""
