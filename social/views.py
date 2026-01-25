@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import FilterSet
 import django_filters
-from django.db.models import Q, F
+from django.db.models import Q, F, Count
 from django.utils import timezone
 
 
@@ -176,7 +176,7 @@ class SocialGroupViewSet(viewsets.ModelViewSet):
     def posts(self, request, pk=None):
         """Get all posts in a social group"""
         group = self.get_object()
-        posts = group.posts.all().order_by('-is_pinned', '-created_at')
+        posts = group.posts.filter(status=3).order_by('-is_pinned', '-created_at').select_related('author')
         serializer = PostListSerializer(posts, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
     
@@ -328,6 +328,23 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(pending_posts, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'])
+    def my_content_counts(self, request):
+        """Get counts of user's posts in a group by status"""
+        social_group_id = request.query_params.get('social_group')
+        if not social_group_id:
+            return Response({'error': 'social_group is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = request.user
+        
+        counts = Post.objects.filter(
+            social_group_id=social_group_id,
+            author=user
+        ).values('status').annotate(count=Count('id'))
+        
+        result = {item['status']: item['count'] for item in counts}
+        return Response(result)
+
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         post = self.get_object()
@@ -393,7 +410,11 @@ class PostViewSet(viewsets.ModelViewSet):
         """Handle file attachments during update"""
         from .models import PostAttachment
         
-        post = serializer.save()
+        # If post status is Denied (7), reset to Pending (6) on update
+        if serializer.instance.status == 7:
+            post = serializer.save(status=6)
+        else:
+            post = serializer.save()
         
         # Handle deletions
         if hasattr(self.request.data, 'getlist'):
