@@ -10,6 +10,15 @@ class SocialGroup(BaseCreateUpdateDeleteModel):
     avatar = models.ImageField(upload_to='social_groups', null=True, blank=True)
     cover = models.ImageField(upload_to='social_groups', null=True, blank=True)
     is_public = models.BooleanField(default=True)
+    #Company page informations
+    slogan = models.CharField(max_length=255, null=True, blank=True)
+    biography = models.TextField(null=True, blank=True)
+    address = models.CharField(max_length=255, null=True, blank=True)
+    phone = models.CharField(max_length=255, null=True, blank=True)
+    email = models.CharField(max_length=255, null=True, blank=True)
+    website = models.CharField(max_length=255, null=True, blank=True)
+    established_date = models.DateField(null=True, blank=True)
+    is_company = models.BooleanField(default=False)
     historical = HistoricalRecords()
 
     def __str__(self):
@@ -19,7 +28,8 @@ GROUP_ROLES = (
     (1, 'Admin'),
     (2, 'Moderator'),
     (3, 'Anonym'),
-    (4, 'Member')
+    (4, 'Member'),
+    (5, 'Representative')
 )
 GROUP_MEMBER_STATUSES = (
     (1, 'Active'),

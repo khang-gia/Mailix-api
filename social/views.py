@@ -27,7 +27,7 @@ class SocialGroupFilter(FilterSet):
     
     class Meta:
         model = SocialGroup
-        fields = ['name', 'is_public']
+        fields = ['name', 'is_public', 'is_company']
     
     def elastic_search(self, queryset, name, value):
         if not value:
