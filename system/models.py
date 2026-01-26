@@ -98,7 +98,7 @@ class Department(BaseCreateUpdateDeleteModel):
     config_volume = models.ForeignKey('ConfigVolume', on_delete=models.SET_NULL, null=True, blank=True, related_name='departments', db_index=True)
     history = HistoricalRecords()
 
-    def _str_(self) -> str:
+    def __str__(self) -> str:
         return "Department {}".format(self.name)
 
 UNIT_CHOICES = (

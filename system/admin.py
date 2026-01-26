@@ -40,5 +40,5 @@ class SystemGroupAdmin(admin.ModelAdmin):
 
 @admin.register(SystemResource)
 class SystemResourceAdmin(admin.ModelAdmin):
-  list_display = ('name',)
+  list_display = ('name','code','apps')
 
