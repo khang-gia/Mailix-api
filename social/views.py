@@ -172,6 +172,36 @@ class SocialGroupViewSet(viewsets.ModelViewSet):
         except SocialGroupMember.DoesNotExist:
             return Response({'detail': 'You are not a member of this group.'}, status=status.HTTP_404_NOT_FOUND)
     
+    @action(detail=True, methods=['post'])
+    def add_members(self, request, pk=None):
+        """Add multiple members to a group (admin only)"""
+        group = self.get_object()
+        
+        # Check if user is admin of the group
+        if not group.members.filter(user=request.user, role=1, status=1).exists() and not request.user.is_superuser:
+             return Response({'detail': 'Only group admins can add members.'}, status=status.HTTP_403_FORBIDDEN)
+
+        user_ids = request.data.get('user_ids', [])
+        if not user_ids:
+            return Response({'detail': 'No users selected.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        added_count = 0
+        for user_id in user_ids:
+            # Check if already member
+            if not group.members.filter(user_id=user_id).exists():
+                try:
+                    SocialGroupMember.objects.create(
+                        social_group=group,
+                        user_id=user_id,
+                        role=4, # Member
+                        status=1 # Active
+                    )
+                    added_count += 1
+                except Exception as e:
+                    pass
+        
+        return Response({'detail': f'Added {added_count} members.'}, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['get'])
     def posts(self, request, pk=None):
         """Get all posts in a social group"""
@@ -720,11 +750,40 @@ class PollVoteViewSet(viewsets.ReadOnlyModelViewSet):
         return PollVoteSerializer
 
 
+class UserSocialProfileFilter(FilterSet):
+    search = django_filters.CharFilter(method='elastic_search')
+    not_in_group = django_filters.NumberFilter(method='not_in_group_filter')
+    
+    class Meta:
+        model = UserSocialProfile
+        fields = ['user']
+    
+    def elastic_search(self, queryset, name, value):
+        if not value:
+            return queryset
+        fields = ['user__username__icontains', 'user__first_name__icontains', 'user__last_name__icontains', 'user__email__icontains']
+        _q = Q()
+        for field in fields:
+            _q = _q | Q(**{field: value})
+        return queryset.filter(_q)
+
+    def not_in_group_filter(self, queryset, name, value):
+        """Filter out users who are already in the specified group"""
+        if not value:
+            return queryset
+        
+        # Get all user IDs that are already in the group
+        users_in_group = SocialGroupMember.objects.filter(social_group=value).values_list('user_id', flat=True)
+        
+        # Return only users who are NOT in the group
+        return queryset.exclude(user_id__in=users_in_group)
+
 class UserSocialProfileViewSet(viewsets.ModelViewSet):
     """ViewSet for user social profiles"""
     queryset = UserSocialProfile.objects.all()
     serializer_class = UserSocialProfileSerializer
     permission_classes = [IsAuthenticated]
+    filterset_class = UserSocialProfileFilter
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
     
     def get_queryset(self):
