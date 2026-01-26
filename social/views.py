@@ -259,10 +259,33 @@ class PostFilter(FilterSet):
     social_group = django_filters.NumberFilter(field_name='social_group__id')
     author = django_filters.NumberFilter(field_name='author__id')
     post_types = django_filters.CharFilter(method='filter_post_types')
+    new_feed = django_filters.BooleanFilter(method='filter_new_feed')
     
     class Meta:
         model = Post
         fields = ['social_group', 'author', 'post_type', 'is_pinned', 'status']
+    
+    def filter_new_feed(self, queryset, name, value):
+        if not value:
+            return queryset
+        
+        user = self.request.user
+        # Get IDs of groups where user is a member
+        user_group_ids = SocialGroupMember.objects.filter(
+            user=user,
+            status=1  # Active members only
+        ).values_list('social_group_id', flat=True)
+        return queryset.filter(
+            Q(author=user) | 
+            (
+                Q(privacy=1) & 
+                (
+                    Q(social_group__isnull=True) | 
+                    Q(social_group__in=user_group_ids) |
+                    Q(social_group__is_company=True)
+                )
+            )
+        )
     
     def elastic_search(self, queryset, name, value):
         if not value:
