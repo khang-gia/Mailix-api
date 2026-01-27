@@ -265,11 +265,14 @@ class PostListSerializer(serializers.ModelSerializer):
 class PostDetailSerializer(serializers.ModelSerializer):
     author = UserOtherViewSerializer(read_only=True)
     social_group = SocialGroupListSerializer(read_only=True)
+    social_group_name = serializers.CharField(source='social_group.name', read_only=True)
     post_type_display = serializers.CharField(source='get_post_type_display', read_only=True)
     poll_options = PollOptionsGeneralSerializer(many=True, read_only=True)
     image = serializers.SerializerMethodField(read_only=True)
     file = serializers.SerializerMethodField(read_only=True)
     user_interaction = serializers.SerializerMethodField()
+    your_interaction = serializers.SerializerMethodField()
+    top_interaction_types = serializers.SerializerMethodField()
     attachments = PostAttachmentSerializer(many=True, read_only=True)
     
     class Meta:
@@ -304,6 +307,19 @@ class PostDetailSerializer(serializers.ModelSerializer):
                     'interaction_type_display': interaction.get_interaction_type_display()
                 }
         return None
+    
+    def get_your_interaction(self, obj):
+        """Get the user's interaction type if they have interacted, otherwise None"""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            interaction = obj.interactions.filter(user=request.user).first()
+            if interaction:
+                return interaction.interaction_type
+        return None
+    
+    def get_top_interaction_types(self, obj):
+        """Get top 3 interaction types for this post"""
+        return obj.get_top_interaction_types(limit=3)
 
 
 class PostInteractionSerializer(serializers.ModelSerializer):
