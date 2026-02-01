@@ -176,7 +176,8 @@ def create_mail_user(data):
             "email": "quangnguyen@gmail.com",
             "role": "USER",
             "active": True,
-            "refId": "REF001"
+            "refId": "REF001",
+            "smtpPassword": "the same password as the user's password"
         }
         success, response = create_mail_user(data)
     """
@@ -189,6 +190,8 @@ def create_mail_user(data):
         data['role'] = 'USER'
     if 'active' not in data:
         data['active'] = True
+    if 'smtpPassword' not in data:
+        data['smtpPassword'] = data['password']
     
     # Create user without authentication (public endpoint)
     logger.info(f'[MAIL_SERVER] create_mail_user: {data.get("username")} - {data.get("email")}')
