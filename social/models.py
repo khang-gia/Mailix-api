@@ -181,6 +181,12 @@ def count_post_comments(sender, instance, created, **kwargs):
         post.comments_count = post.comments.count()
         post.save()
 
+@receiver(signal=post_save, sender='auth.User')
+def create_user_social_profile(sender, instance, created, **kwargs):
+    """Auto-create UserSocialProfile when a new User account is created"""
+    if created:
+        UserSocialProfile.objects.create(user=instance)
+
 class PostAttachment(BaseCreateUpdateDeleteModel):
     post = models.ForeignKey('Post', on_delete=models.CASCADE, related_name='attachments')
     file = models.FileField(upload_to='post_attachments')
