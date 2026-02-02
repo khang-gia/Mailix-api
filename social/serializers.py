@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.db import models
 from .models import SocialGroup, SocialGroupMember, Post, PollOption, PostInteraction, PollVote, PostComment, PostAttachment, PostCommentAttachment, UserSocialProfile, Friendship
-from core.serializers import UserOtherViewSerializer, UserListSerializer
+from core.serializers import UserSocialViewSerializer, UserListSerializer
 
 
 class PostAttachmentSerializer(serializers.ModelSerializer):
@@ -115,7 +115,7 @@ class SocialGroupMemberSerializer(serializers.ModelSerializer):
 
 
 class SocialGroupMemberListSerializer(serializers.ModelSerializer):
-    user = UserOtherViewSerializer(read_only=True)
+    user = UserSocialViewSerializer(read_only=True)
     social_group_name = serializers.CharField(source='social_group.name', read_only=True)
     role_display = serializers.CharField(source='get_role_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -155,7 +155,7 @@ class PollOptionsGeneralSerializer(serializers.ModelSerializer):
         return False
 class PollVoteUserOnlySerializer(serializers.ModelSerializer):
     """Serializer for poll votes with only user information (no poll option details)"""
-    user = UserOtherViewSerializer(read_only=True)
+    user = UserSocialViewSerializer(read_only=True)
     
     class Meta:
         model = PollVote
@@ -187,7 +187,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
         allow_empty=False
     )
     attachments = PostAttachmentSerializer(many=True, read_only=True)
-    author = UserOtherViewSerializer(read_only=True)
+    author = UserSocialViewSerializer(read_only=True)
     
     class Meta:
         model = Post
@@ -217,7 +217,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
         return post
 
 class PostListSerializer(serializers.ModelSerializer):
-    author = UserOtherViewSerializer(read_only=True)
+    author = UserSocialViewSerializer(read_only=True)
     social_group_name = serializers.CharField(source='social_group.name', read_only=True)
     post_type_display = serializers.CharField(source='get_post_type_display', read_only=True)
     image = serializers.SerializerMethodField(read_only=True)
@@ -263,7 +263,7 @@ class PostListSerializer(serializers.ModelSerializer):
         return obj.get_top_interaction_types(limit=3)
 
 class PostDetailSerializer(serializers.ModelSerializer):
-    author = UserOtherViewSerializer(read_only=True)
+    author = UserSocialViewSerializer(read_only=True)
     social_group = SocialGroupListSerializer(read_only=True)
     social_group_name = serializers.CharField(source='social_group.name', read_only=True)
     post_type_display = serializers.CharField(source='get_post_type_display', read_only=True)
@@ -329,7 +329,7 @@ class PostInteractionSerializer(serializers.ModelSerializer):
 
 
 class PostInteractionListSerializer(serializers.ModelSerializer):
-    user = UserOtherViewSerializer(read_only=True)
+    user = UserSocialViewSerializer(read_only=True)
     interaction_type_display = serializers.CharField(source='get_interaction_type_display', read_only=True)
     
     class Meta:
@@ -344,7 +344,7 @@ class PollVoteSerializer(serializers.ModelSerializer):
 
 
 class PollVoteListSerializer(serializers.ModelSerializer):
-    user = UserOtherViewSerializer(read_only=True)
+    user = UserSocialViewSerializer(read_only=True)
     poll_option_text = serializers.CharField(source='poll_option.option', read_only=True)
     
     class Meta:
@@ -378,7 +378,7 @@ class PostCommentSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
     def get_user(self, obj):
-      user_serializer = UserOtherViewSerializer(obj.user, context=self.context)
+      user_serializer = UserSocialViewSerializer(obj.user, context=self.context)
       return user_serializer.data
 
     def get_like_count(self, obj):
@@ -447,7 +447,7 @@ class PostCommentCreateSerializer(serializers.ModelSerializer):
 
 class UserSocialProfileSerializer(serializers.ModelSerializer):
     """Serializer for user social profile with privacy-aware field display"""
-    user = UserOtherViewSerializer(read_only=True)
+    user = UserSocialViewSerializer(read_only=True)
     avatar_url = serializers.SerializerMethodField(read_only=True)
     cover_photo_url = serializers.SerializerMethodField(read_only=True)
     post_count = serializers.SerializerMethodField()
@@ -497,8 +497,8 @@ class UserSocialProfileSerializer(serializers.ModelSerializer):
 
 class FriendshipSerializer(serializers.ModelSerializer):
     """Serializer for friendship relationships"""
-    from_user = UserOtherViewSerializer(read_only=True)
-    to_user = UserOtherViewSerializer(read_only=True)
+    from_user = UserSocialViewSerializer(read_only=True)
+    to_user = UserSocialViewSerializer(read_only=True)
     
     class Meta:
         model = Friendship

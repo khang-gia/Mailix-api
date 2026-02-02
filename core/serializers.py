@@ -82,7 +82,8 @@ class UserSerializer(serializers.ModelSerializer):
         return avatar_url
       return None
 
-class UserOtherViewSerializer(serializers.ModelSerializer):
+class UserHRViewSerializer(serializers.ModelSerializer):
+    """Serializer for non-social contexts (works, contacts, customers) - uses HR profile avatar"""
     display_name = serializers.SerializerMethodField(read_only=True)
     avatar = serializers.SerializerMethodField(read_only=True)
     profile_hr = ProfileHRDetailSerializer(read_only=True, required=False)
@@ -96,16 +97,34 @@ class UserOtherViewSerializer(serializers.ModelSerializer):
     def get_avatar(self, obj):
       request = self.context.get('request')
       
-      # Priority 1: Check for social profile avatar
-      if hasattr(obj, 'social_profile') and obj.social_profile and obj.social_profile.avatar:
-        avatar_url = obj.social_profile.avatar.url
+      # Only use HR profile avatar for non-social contexts
+      if hasattr(obj, 'profile_hr') and obj.profile_hr and obj.profile_hr.avatar:
+        avatar_url = obj.profile_hr.avatar.url
         if request is not None:
           return request.build_absolute_uri(avatar_url)
         return avatar_url
+        
+      return None
+
+
+class UserSocialViewSerializer(serializers.ModelSerializer):
+    """Serializer for social contexts (posts, social comments) - uses social profile avatar"""
+    display_name = serializers.SerializerMethodField(read_only=True)
+    avatar = serializers.SerializerMethodField(read_only=True)
+    
+    class Meta:
+        model = User
+        exclude = ['password', 'user_permissions', 'is_superuser', 'is_staff']
+
+    def get_display_name(self, obj):
+        return '%s %s'%(obj.first_name, obj.last_name) if obj.first_name else obj.username if not hasattr(obj, 'profile_hr') else obj.profile_hr.full_name
+
+    def get_avatar(self, obj):
+      request = self.context.get('request')
       
-      # Priority 2: Fall back to HR profile avatar
-      if hasattr(obj, 'profile_hr') and obj.profile_hr and obj.profile_hr.avatar:
-        avatar_url = obj.profile_hr.avatar.url
+      # Only use social profile avatar for social contexts
+      if hasattr(obj, 'social_profile') and obj.social_profile and obj.social_profile.avatar:
+        avatar_url = obj.social_profile.avatar.url
         if request is not None:
           return request.build_absolute_uri(avatar_url)
         return avatar_url
@@ -245,7 +264,7 @@ class CustomerAttachmentSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 class CustomerAttachmentListSerializer(serializers.ModelSerializer):
-    uploaded_by = UserOtherViewSerializer(read_only=True)
+    uploaded_by = UserHRViewSerializer(read_only=True)
     class Meta:
         model = CustomerAttachment
         fields = '__all__'
@@ -261,7 +280,7 @@ class WorkAttachmentSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 class WorkAttachmentListSerializer(serializers.ModelSerializer):
-    uploaded_by = UserOtherViewSerializer(read_only=True)
+    uploaded_by = UserHRViewSerializer(read_only=True)
     class Meta:
         model = WorkAttachment
         fields = '__all__'
@@ -335,7 +354,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
     customer_source = serializers.CharField(source='get_customer_source_display', read_only=True)
     customer_group = serializers.CharField(source='get_customer_group_display', read_only=True)
     type_of_customer = serializers.CharField(source='get_type_of_customer_display', read_only=True) 
-    curators = UserOtherViewSerializer(read_only=True, many=True)
+    curators = UserHRViewSerializer(read_only=True, many=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     class Meta:
         model = Customer
@@ -345,7 +364,7 @@ class CustomerDetailSerializer(serializers.ModelSerializer):
     curators = UserListSerializer(read_only=True, many=True)
     additional_infos = CustomerAdditionalSerializer(many=True, read_only=True)
     avatar = serializers.SerializerMethodField(read_only=True)
-    curators_list = UserOtherViewSerializer(read_only=True, many=True, source='curators')
+    curators_list = UserHRViewSerializer(read_only=True, many=True, source='curators')
     customer_source_display = serializers.CharField(source='get_customer_source_display', read_only=True)
     type_of_customer_display = serializers.CharField(source='get_type_of_customer_display', read_only=True)
     line_of_business_display = serializers.CharField(source='get_line_of_business_display', read_only=True)
@@ -389,13 +408,13 @@ class ScheduleEventSerializer(serializers.ModelSerializer):
       return instance
 
 class ScheduleEventListSerializer(serializers.ModelSerializer):
-    user = UserOtherViewSerializer(read_only=True)
+    user = UserHRViewSerializer(read_only=True)
     class Meta:
         model = ScheduleEvent
         exclude = [ 'participants']
 
 class ScheduleEventDetailSerializer(serializers.ModelSerializer):
-    user = UserOtherViewSerializer(read_only=True)
+    user = UserHRViewSerializer(read_only=True)
     participants = UserListSerializer(read_only=True, many=True)
     
     class Meta:
@@ -456,10 +475,10 @@ class WorkSerializer(serializers.ModelSerializer):
       return instance
 
 class WorkListSerializer(serializers.ModelSerializer):
-    assigned_to = UserOtherViewSerializer(read_only=True, many=True)
-    assigned_by = UserOtherViewSerializer(read_only=True, many=True)
-    managers = UserOtherViewSerializer(read_only=True, many=True)
-    created_by = UserOtherViewSerializer(read_only=True)
+    assigned_to = UserHRViewSerializer(read_only=True, many=True)
+    assigned_by = UserHRViewSerializer(read_only=True, many=True)
+    managers = UserHRViewSerializer(read_only=True, many=True)
+    created_by = UserHRViewSerializer(read_only=True)
     class Meta:
         model = Works
         fields = '__all__'
@@ -467,13 +486,13 @@ class WorkListSerializer(serializers.ModelSerializer):
 
 class WorkDetailSerializer(serializers.ModelSerializer):
     assigned_to = UserListSerializer(read_only=True, many=True)
-    assigned_to_list = UserOtherViewSerializer(read_only=True, many=True, source='assigned_to')
+    assigned_to_list = UserHRViewSerializer(read_only=True, many=True, source='assigned_to')
 
     assigned_by = UserListSerializer(read_only=True, many=True)
-    assigned_by_list = UserOtherViewSerializer(read_only=True, many=True, source='assigned_by')
+    assigned_by_list = UserHRViewSerializer(read_only=True, many=True, source='assigned_by')
 
     managers = UserListSerializer(read_only=True, many=True)
-    managers_list = UserOtherViewSerializer(read_only=True, many=True, source='managers')
+    managers_list = UserHRViewSerializer(read_only=True, many=True, source='managers')
 
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
@@ -589,7 +608,7 @@ class WorkCommentSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
     def get_user(self, obj):
-      user_serializer = UserOtherViewSerializer(obj.user, context=self.context)
+      user_serializer = UserHRViewSerializer(obj.user, context=self.context)
       return user_serializer.data
 
     def get_like_count(self, obj):
@@ -728,7 +747,7 @@ class CustomerCommentSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
     def get_user(self, obj):
-      user_serializer = UserOtherViewSerializer(obj.user, context=self.context)
+      user_serializer = UserHRViewSerializer(obj.user, context=self.context)
       return user_serializer.data
 
     def get_like_count(self, obj):
