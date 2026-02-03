@@ -219,6 +219,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
 class PostListSerializer(serializers.ModelSerializer):
     author = UserSocialViewSerializer(read_only=True)
     social_group_name = serializers.CharField(source='social_group.name', read_only=True)
+    is_company_post = serializers.BooleanField(source='social_group.is_company', read_only=True)
     post_type_display = serializers.CharField(source='get_post_type_display', read_only=True)
     image = serializers.SerializerMethodField(read_only=True)
     file = serializers.SerializerMethodField(read_only=True)
