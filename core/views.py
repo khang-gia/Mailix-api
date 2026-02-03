@@ -1191,6 +1191,7 @@ class WorkFilter(FilterSet):
   priorities = django_filters.CharFilter(method='filter_priorities')
   in_date = django_filters.CharFilter(method='filter_in_date')
   today_task = django_filters.BooleanFilter(method='filter_today_task')
+  related_task = django_filters.BooleanFilter(method='filter_related_task')
   class Meta:
     model = Works
     fields = ['name', 'assigned_to','status','code', 'priority','start_date','end_date','assigned_by', 'managers']
@@ -1259,6 +1260,13 @@ class WorkFilter(FilterSet):
       return queryset
     return queryset.filter(start_date__lte=timezone.now(), end_date__gte=timezone.now())
 
+  def filter_related_task(self, queryset, name, value):
+    #This filter will get all works that the user has related to (include assigned_to, managers, assigned_by)
+    if not value:
+      return queryset
+    return queryset.filter(
+      Q(assigned_to=value) | Q(managers=value) | Q(assigned_by=value)
+    ).distinct()
 class WorkViewSet(viewsets.ModelViewSet):
   queryset = Works.objects.all()
   serializer_class = WorkSerializer
