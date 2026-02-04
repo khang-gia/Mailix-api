@@ -620,17 +620,17 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
         user.save()
         
         # Create mail account on custom mail server
-        mail_data = {
-          "username": username,
-          "email": email,
-          "password": password,
-          "refId": profile_hr.ref_uuid,
-          "role": "USER",
-          "active": True
-        }
-        success, res = create_mail_user(mail_data)
-        if not success:
-          raise Exception(f'Cannot create email account on mail server: {res}')
+        # mail_data = {
+        #   "username": username,
+        #   "email": email,
+        #   "password": password,
+        #   "refId": profile_hr.ref_uuid,
+        #   "role": "USER",
+        #   "active": True
+        # }
+        # success, res = create_mail_user(mail_data)
+        # if not success:
+        #   raise Exception(f'Cannot create email account on mail server: {res}')
         
         profile_hr.user = user
         profile_hr.email = email
