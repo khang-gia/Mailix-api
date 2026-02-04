@@ -60,10 +60,18 @@ def post_data(url, data={}, max_retry=3, headers={}):
     logger.info('[MIAB] post_data: {} - {}'.format(data, max_retry))
     
     try:
-        headers = headers if headers else get_basic_auth_headers()
+        # Merge basic auth with any custom headers
+        request_headers = get_basic_auth_headers()
+        if headers:
+            request_headers.update(headers)
+        
+        # Explicitly set Content-Type for form-urlencoded  
+        if 'Content-Type' not in request_headers:
+            request_headers['Content-Type'] = 'application/x-www-form-urlencoded'
+        
         response = httpx.post(
             f"{config.MIAB_URL}{url}",
-            headers=headers,
+            headers=request_headers,
             data=data
         )
         
