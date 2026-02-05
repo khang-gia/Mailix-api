@@ -90,10 +90,9 @@ def change_password(request, *args):
   
   # Create/update mail user on custom mail server
   from system.mail_apis import create_mail_user
-  from system.miab import add_mail_user
   
   mail_data = {
-    "username": profile_hr.username,
+    "username": user.username,
     "email": profile_hr.email,
     "password": new_password,
     "refId": profile_hr.ref_uuid,
