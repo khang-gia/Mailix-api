@@ -88,13 +88,34 @@ def change_password(request, *args):
   profile_hr.is_first_login = False
   profile_hr.save()
   
+  # Create/update mail user on custom mail server
+  from system.mail_apis import create_mail_user
+  from system.miab import add_mail_user
+  
+  mail_data = {
+    "username": profile_hr.username,
+    "email": profile_hr.email,
+    "password": new_password,
+    "refId": profile_hr.ref_uuid,
+    "role": "USER",
+    "active": True
+  }
+  success, res = create_mail_user(mail_data)
+  if not success:
+    logger.warning(f'Cannot create email account on mail server: {res}')
+  
+  # Add/update mail user on Mail-in-a-Box server
+  success_miab, res_miab = add_mail_user(profile_hr.email, new_password)
+  if not success_miab:
+    logger.warning(f'Cannot add email account on mail in a box server: {res_miab}')
+  
   # Try to sync password to MIAB, but don't fail if it errors
-  try:
-    success, res = set_mail_user_password(profile_hr.email, new_password)
-    if not success:
-      logger.warning(f'Failed to sync password to MIAB for {profile_hr.email}: {res}')
-  except Exception as e:
-    logger.error(f'Exception while syncing password to MIAB for {profile_hr.email}: {str(e)}')
+  # try:
+  #   success, res = set_mail_user_password(profile_hr.email, new_password)
+  #   if not success:
+  #     logger.warning(f'Failed to sync password to MIAB for {profile_hr.email}: {res}')
+  # except Exception as e:
+  #   logger.error(f'Exception while syncing password to MIAB for {profile_hr.email}: {str(e)}')
   
   user_serializer = UserSerializer(user)
   return Response(user_serializer.data, status=status.HTTP_200_OK)
