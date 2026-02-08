@@ -205,8 +205,18 @@ class SocialGroupViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def posts(self, request, pk=None):
         """Get all posts in a social group"""
+        from django.db.models import Case, When, IntegerField
+        
         group = self.get_object()
-        posts = group.posts.filter(status=3).order_by('-is_pinned', '-created_at').select_related('author')
+        posts = group.posts.filter(status=3).select_related('author').annotate(
+            # Create a sort priority: pinned announcements = 0, regular posts = 1
+            sort_priority=Case(
+                When(is_pinned=True, post_type=3, then=0),  # Pinned announcements first
+                default=1,
+                output_field=IntegerField()
+            )
+        ).order_by('sort_priority', '-is_pinned', '-created_at')
+        
         serializer = PostListSerializer(posts, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
     
