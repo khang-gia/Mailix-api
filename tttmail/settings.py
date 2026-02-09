@@ -24,21 +24,22 @@ APP_NAME_PREFIX = os.getenv('APP_NAME_PREFIX','hrm/')
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-_*6u$tfx9q55#@37%gbl4b9@ct&$74e1%_0c_1ehdi+n3gib^d'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-_*6u$tfx9q55#@37%gbl4b9@ct&$74e1%_0c_1ehdi+n3gib^d')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-COOKIE_SECURE_FLAG = not DEBUG
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
+COOKIE_SECURE_FLAG = os.getenv('COOKIE_SECURE_FLAG', str(not DEBUG)).lower() in ('true', '1', 't')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'sandbox.smtp.mailtrap.io')
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '28e492aff14b83')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'c19588c5887025')
-EMAIL_PORT = os.getenv('EMAIL_PORT', 2525)
-EMAIL_USE_TLS = True
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '2525'))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 't')
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() in ('true', '1', 't')
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 
-DEFAULT_FROM_EMAIL = 'giakhanggk95@gmail.com'
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'giakhanggk95@gmail.com')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host.strip()]
 
 # Application definition
 
@@ -142,8 +143,12 @@ WSGI_APPLICATION = 'tttmail.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.sqlite3'),
+        'NAME': os.getenv('DB_NAME', str(BASE_DIR / 'db.sqlite3')),
+        'USER': os.getenv('DB_USER', ''),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', ''),
+        'PORT': os.getenv('DB_PORT', ''),
     }
 }
 
@@ -193,9 +198,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 #CORS
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',') if origin.strip()]
 CORS_ALLOW_HEADERS = list(default_headers) + []
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv('CSRF_TRUSTED_ORIGINS', os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000')).split(',') if origin.strip()]
 
 LOGGING = {
     'version': 1,
@@ -327,6 +332,14 @@ CACHES = {
         },
         "TIMEOUT": 60*60*24*30 # max 30 days
     },
+    "autodialer": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.getenv('CACHE_AUTODIALER_LOCATION', 'redis://127.0.0.1:6379/5'),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "TIMEOUT": 60*60*24*30 # max 30 days
+    },
 
 }
 CELERY_DEFAULT_QUEUE = os.getenv('CELERY_DEFAULT_QUEUE', '')
@@ -343,15 +356,17 @@ CONSTANCE_CONFIG = {
 }
 
 
-STATIC_URL = '/static/'
+STATIC_URL = os.getenv('STATIC_URL', '/static/')
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = '/media/'
+MEDIA_URL = os.getenv('MEDIA_URL', '/media/')
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-try:
-    from .local_settings import *
-except Exception as e:
-    print("Failed to load local_settings", e)
-    pass
+# Environment variables are now loaded via os.getenv() throughout this file
+# local_settings.py is no longer used - all configuration should be in .env file
+# try:
+#     from .local_settings import *
+# except Exception as e:
+#     print("Failed to load local_settings", e)
+#     pass
 
 
