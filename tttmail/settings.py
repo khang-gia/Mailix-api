@@ -353,6 +353,7 @@ CONSTANCE_CONFIG = {
     'COMPANY_NETWORK_IP': (
         '', 'List of IP addresses of the company network (comma-separated)', str,
     ),
+    'FRONTEND_URL': ('http://localhost:3000', 'Frontend application URL (used in emails, e.g. login link)'),
 }
 
 

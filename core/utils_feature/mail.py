@@ -43,7 +43,9 @@ def send_error_500_email(error_message=None, error_url=None, error_detail=None):
     )
     
 def send_password_on_create_user(to_email, miab_mail, username, password):
+    from constance import config
     logger.info('send_password_on_create_user: {} - {}'.format(to_email, username))
+    login_url = '{}/login'.format(config.FRONTEND_URL.rstrip('/'))
     send_mail_in_background.delay(
         to_emails = [to_email],
         template_url = 'mails/create_user.html', 
@@ -53,6 +55,7 @@ def send_password_on_create_user(to_email, miab_mail, username, password):
             'miab_mail': miab_mail,
             'username': username,
             'password': password,
+            'login_url': login_url,
             'year': timezone.now().year
         }
     )

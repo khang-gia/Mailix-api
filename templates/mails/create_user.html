@@ -50,6 +50,27 @@
             border-top: 1px solid #eee;
             padding-top: 10px;
         }
+        .btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 28px;
+            background-color: #0313B0;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+        }
+        .btn-wrap {
+            text-align: center;
+            margin-top: 24px;
+        }
+        .fallback-link {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -66,6 +87,12 @@
                 <p><strong>Password:</strong> {{ password }}</p>
             </div>
             <p>Please keep this information safe.</p>
+            <div class="btn-wrap">
+                <a href="{{ login_url }}" class="btn">Login now →</a>
+            </div>
+            <p class="fallback-link">
+                Or copy this link: <a href="{{ login_url }}">{{ login_url }}</a>
+            </p>
         </div>
         <div class="footer">
             &copy; {{ year }} MAILIX. All rights reserved.
