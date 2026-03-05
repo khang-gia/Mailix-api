@@ -601,8 +601,6 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
 
   @action(detail=True , methods=['post'])
   def create_account(self, request, pk=None):
-    from system.mail_apis import create_mail_user
-    
     profile_hr = self.get_object()
     email = request.data.get('email', None)
     authen_email = request.data.get('authen_email', None)
@@ -619,8 +617,8 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
     if email.lower() == authen_email.lower():
       return Response({'detail': 'Authentication email must be different from company email.'}, status=status.HTTP_400_BAD_REQUEST)
     
-    if User.objects.filter(email=authen_email).exists():
-      return Response({'detail': 'Authen email is already in use by another account.'}, status=status.HTTP_400_BAD_REQUEST)
+    # if User.objects.filter(email=authen_email).exists():
+    #   return Response({'detail': 'Authen email is already in use by another account.'}, status=status.HTTP_400_BAD_REQUEST)
     
     if User.objects.filter(username=username).exists():
       return Response({'detail': 'Username is already in use by another account.'}, status=status.HTTP_400_BAD_REQUEST)
