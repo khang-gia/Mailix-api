@@ -558,7 +558,8 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
 
   @action(detail=False, methods=['post'])
   def change_password(self, request, pk=None):
-    from system.mail_apis import create_mail_user
+    # from system.mail_apis import create_mail_user
+    from system.miab import set_mail_user_password
     import logging
     logger = logging.getLogger('miab') 
     profile_id = request.data.get('profile_id')
@@ -579,23 +580,10 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
       # Set new password
       profile.user.set_password(new_password)
       profile.user.save()
-      mail_data = {
-          "username": profile.username,
-          "email": profile.email,
-          "password": new_password,
-          "refId": profile.ref_uuid,
-          "role": "USER",
-          "active": True
-        }
-      success, res = create_mail_user(mail_data)
-      if not success:
-        logger.warning(f'Cannot create email account on mail server: {res}')
-        # raise Exception(f'Cannot create email account on mail server: {res}')
-        pass
       
-      success_miab, res_miab = add_mail_user(profile.email, new_password)
+      success_miab, res_miab = set_mail_user_password(profile.email, new_password)
       if not success_miab:
-        logger.warning(f'Cannot add email account on mail in a box server: {res_miab}')
+        logger.warning(f'Cannot change password on mail in a box server: {res_miab}')
         # raise Exception(f'Cannot add email account on mail in a box server: {res_miab}')
         pass
       
