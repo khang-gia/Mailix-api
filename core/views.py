@@ -908,6 +908,12 @@ class CustomerViewSet(viewsets.ModelViewSet):
   ordering_fields = ['id']
   ordering = ('-id',)
 
+  def get_queryset(self):
+    user = self.request.user
+    if user.is_superuser or user.is_staff:
+      return Customer.objects.all()
+    return Customer.objects.filter(curators=user)
+
   def get_serializer_class(self):
     if self.action == 'list':
       return CustomerListSerializer
@@ -1297,6 +1303,14 @@ class WorkViewSet(viewsets.ModelViewSet):
   ordering_fields = ['id']
   permission_classes = [IsAuthenticated]
   ordering = ('-id',)
+
+  def get_queryset(self):
+    user = self.request.user
+    if user.is_superuser or user.is_staff:
+      return Works.objects.all()
+    return Works.objects.filter(
+      Q(assigned_to=user) | Q(assigned_by=user) | Q(managers=user)
+    ).distinct()
 
   def get_serializer_class(self):
     if self.action == 'list':
