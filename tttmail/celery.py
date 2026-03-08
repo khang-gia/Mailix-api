@@ -8,3 +8,8 @@ app = Celery('tttmail')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
 app.autodiscover_tasks()
+
+@shared_task
+def t_process_hard_delete_old_profiles():
+    from core.tasks import process_hard_delete_old_profiles
+    process_hard_delete_old_profiles()

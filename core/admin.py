@@ -19,9 +19,13 @@ admin.site.register(CustomerComment)
 admin.site.register(CustomerCommentAttachment)
 @admin.register(ProfileHR)
 class ProfileHRAdmin(admin.ModelAdmin):
-  list_display = ('full_name', 'status', 'department', 'direct_manager', 'user', 'email')
+  list_display = ('full_name', 'status', 'department', 'direct_manager', 'user', 'email', 'is_deleted')
   raw_id_fields = ('user', 'department')
+  list_filter = ('status', 'account_status')
 
+  def get_queryset(self, request):
+      # Use global_objects to include soft-deleted records in the admin list
+      return self.model.global_objects.all()
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
   list_display = ('name', 'customer_code','status','stage')

@@ -235,7 +235,13 @@ def pre_login(request, *args):
   if not user:
     return Response({'username': ['Email hoặc mật khẩu không đúng.']}, status=status.HTTP_401_UNAUTHORIZED)
   user_serializer = UserSerializer(user)
-  profile_user = ProfileHR.objects.filter(user=user).first()
+  profile_user = ProfileHR.global_objects.filter(user=user).first()
+  
+  # Check if profile has been soft-deleted
+  if profile_user and profile_user.is_deleted:
+    return Response({
+      'username': ['Your account has been deleted. Please contact administrator.']
+    }, status=status.HTTP_403_FORBIDDEN)
   
   # Check if user account is deactivated or inactive
   if profile_user and profile_user.account_status in [2, 4]:
@@ -500,6 +506,11 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
     return ProfileHRSerializer
 
   def get_queryset(self):
+    # Support ?deleted=true to list soft-deleted profiles (admins only)
+    if self.request.query_params.get('deleted') == 'true':
+      if self.request.user.is_superuser or self.request.user.is_staff:
+        return ProfileHR.deleted_objects.all()
+      return ProfileHR.deleted_objects.none()
     if self.request.user.is_superuser:
       return self.queryset
     # Regular users: exclude deactivated (4) and inactive (2) accounts
@@ -525,7 +536,38 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
     for profile_id in profile_ids:
       try:
         profile = ProfileHR.objects.get(pk=profile_id)
-        profile.delete()
+        # Also disable the Django auth user so authenticate() rejects them immediately
+        if profile.user:
+          profile.user.is_active = False
+          profile.user.save(update_fields=['is_active'])
+        profile.delete()  # soft-delete: sets is_deleted=True, deleted_at=now()
+      except ProfileHR.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+      except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(status=status.HTTP_200_OK)
+
+  @action(detail=False, methods=['post'])
+  def restore_users(self, request, pk=None):
+    """Restore soft-deleted profiles (admin only). Re-enables login."""
+    if not (request.user.is_superuser or request.user.is_staff):
+      return Response(status=status.HTTP_403_FORBIDDEN)
+    profile_ids = request.data.get('profiles', [])
+    if not profile_ids:
+      return Response(status=status.HTTP_400_BAD_REQUEST)
+    for profile_id in profile_ids:
+      try:
+        profile = ProfileHR.deleted_objects.get(pk=profile_id)
+        # Patch User to prevent django_softdelete from throwing AttributeError on strict=False restore
+        from django.contrib.auth.models import User
+        if not hasattr(User, 'transaction_id'):
+            User.transaction_id = None
+            
+        profile.restore(strict=False)  # sets is_deleted=False, deleted_at=None
+        # Re-enable the associated Django auth user
+        if profile.user:
+          profile.user.is_active = True
+          profile.user.save(update_fields=['is_active'])
       except ProfileHR.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
       except Exception as e:

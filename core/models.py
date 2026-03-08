@@ -154,7 +154,7 @@ class Bank(models.Model):
     def __str__(self):
         return "Bank <{}> {}".format(self.pk, self.name)
 
-class UserBankAccount(models.Model):
+class UserBankAccount(BaseCreateUpdateDeleteModel):
     user = models.ForeignKey("ProfileHR", on_delete=models.CASCADE, related_name='bank_accounts')
     bank = models.ForeignKey("core.Bank", on_delete=models.CASCADE, related_name='users')
     account_number = models.CharField("Account Number", max_length=20)
@@ -181,7 +181,7 @@ FAMILY_RELATIONSHIP_CHOICES = (
   (14, "Nephew"),
   (15, "Niece"),
 )
-class FamilyRelationship(models.Model):
+class FamilyRelationship(BaseCreateUpdateDeleteModel):
     user = models.ForeignKey("ProfileHR", on_delete=models.CASCADE, related_name='family_relationships')
     relationship = models.IntegerField("Relationship", choices=FAMILY_RELATIONSHIP_CHOICES, null=True, blank=True)
     full_name = models.CharField("Full Name", max_length=200, null=True, blank=True)
@@ -216,7 +216,7 @@ DEGREE_CHOICES = (
   (1, "Master"),
   (2, "Doctor"),
 )
-class ProfessionalQualification(models.Model):
+class ProfessionalQualification(BaseCreateUpdateDeleteModel):
     user = models.ForeignKey("ProfileHR", on_delete=models.CASCADE, related_name='professional_qualifications')
     from_date = models.DateField("From Date", null=True, blank=True)
     to_date = models.DateField("To Date", null=True, blank=True)

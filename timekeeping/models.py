@@ -7,7 +7,7 @@ from simple_history.models import HistoricalRecords
 # from django.contrib.gis.db import models as gis_models
 
 
-class TimeRecord(models.Model):
+class TimeRecord(BaseCreateUpdateDeleteModel):
     user = models.ForeignKey('core.ProfileHR', on_delete=models.CASCADE, related_name='time_records')
     date = models.DateField()
     clock_in = models.TimeField(null=True, blank=True)
