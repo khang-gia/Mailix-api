@@ -479,6 +479,7 @@ class WorkListSerializer(serializers.ModelSerializer):
     assigned_by = UserHRViewSerializer(read_only=True, many=True)
     managers = UserHRViewSerializer(read_only=True, many=True)
     created_by = UserHRViewSerializer(read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
     class Meta:
         model = Works
         fields = '__all__'
