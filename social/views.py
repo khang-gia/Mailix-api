@@ -72,6 +72,7 @@ class SocialGroupViewSet(viewsets.ModelViewSet):
         """
         Return groups that the user can access:
         - All public groups
+        - All company groups (is_company=True) — always visible to all authenticated users
         - Private groups where the user is a member
         - All groups if user is superuser
         """
@@ -86,9 +87,9 @@ class SocialGroupViewSet(viewsets.ModelViewSet):
             status=1  # Active members only
         ).values_list('social_group_id', flat=True)
         
-        # Return public groups OR groups where user is a member
+        # Return public groups OR company groups OR groups where user is a member
         return SocialGroup.objects.filter(
-            Q(is_public=True) | Q(id__in=user_group_ids)
+            Q(is_public=True) | Q(is_company=True) | Q(id__in=user_group_ids)
         ).distinct()
     
     def filter_queryset(self, queryset):
