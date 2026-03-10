@@ -183,9 +183,17 @@ def count_post_comments(sender, instance, created, **kwargs):
 
 @receiver(signal=post_save, sender='auth.User')
 def create_user_social_profile(sender, instance, created, **kwargs):
-    """Auto-create UserSocialProfile when a new User account is created"""
+    """Auto-create UserSocialProfile and add to company groups when a new User account is created"""
     if created:
         UserSocialProfile.objects.create(user=instance)
+        # Auto-add new user as a member of all company SocialGroups
+        company_groups = SocialGroup.objects.filter(is_company=True)
+        for group in company_groups:
+            SocialGroupMember.objects.get_or_create(
+                social_group=group,
+                user=instance,
+                defaults={'role': 4, 'status': 1}  # Member, Active
+            )
 
 class PostAttachment(BaseCreateUpdateDeleteModel):
     post = models.ForeignKey('Post', on_delete=models.CASCADE, related_name='attachments')

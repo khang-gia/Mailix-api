@@ -34,9 +34,19 @@ class Command(BaseCommand):
         
         # Create profiles
         created_count = 0
+        from social.models import SocialGroup, SocialGroupMember
+        company_groups = SocialGroup.objects.filter(is_company=True)
+
         for user in users_without_profile:
             try:
                 UserSocialProfile.objects.create(user=user)
+                # Also add to company groups
+                for group in company_groups:
+                    SocialGroupMember.objects.get_or_create(
+                        social_group=group,
+                        user=user,
+                        defaults={'role': 4, 'status': 1}  # Member, Active
+                    )
                 created_count += 1
                 self.stdout.write(
                     self.style.SUCCESS(f'Created profile for {user.username} (ID: {user.id})')
