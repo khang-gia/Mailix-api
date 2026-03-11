@@ -940,7 +940,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
     user = self.request.user
     if user.is_superuser or user.is_staff:
       return Customer.objects.all()
-    return Customer.objects.filter(curators=user)
+    return Customer.objects.filter(curators=user, created_by=user)
 
   def get_serializer_class(self):
     if self.action == 'list':
