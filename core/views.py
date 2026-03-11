@@ -940,7 +940,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
     user = self.request.user
     if user.is_superuser or user.is_staff:
       return Customer.objects.all()
-    return Customer.objects.filter(curators=user, created_by=user)
+    return Customer.objects.filter(Q(curators=user) | Q(created_by=user)).distinct()
 
   def get_serializer_class(self):
     if self.action == 'list':
@@ -948,6 +948,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
     elif self.action == 'retrieve':
       return CustomerDetailSerializer
     return CustomerSerializer
+
+  def perform_create(self, serializer):
+    serializer.save(created_by=self.request.user)
   
   @action(detail=False, methods=['post'])
   def delete_customers(self, request, pk=None):

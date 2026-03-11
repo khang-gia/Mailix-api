@@ -552,6 +552,7 @@ class Customer(BaseCreateUpdateDeleteModel):
     status = models.IntegerField("Status", choices=CUSTOMER_STATUSES, default=1, null=True, blank=True, db_index=True)
     stage = models.IntegerField("Stage", choices=CUSTOMER_STAGES, default=1, null=True, blank=True, db_index=True)
     title = models.CharField("Title", max_length=15,  null=True, blank=True, db_index=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_customers', db_index=True)
     history = HistoricalRecords()
 
     class Meta:
