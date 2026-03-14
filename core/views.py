@@ -940,7 +940,13 @@ class CustomerViewSet(viewsets.ModelViewSet):
     user = self.request.user
     if user.is_superuser or user.is_staff:
       return Customer.objects.all()
-    return Customer.objects.filter(Q(curators=user) | Q(created_by=user)).distinct()
+    managed_users = list(ProfileHR.objects.filter(direct_manager=user).values_list('user', flat=True))
+    allowed_users = managed_users + [user.id]
+
+    return Customer.objects.filter(
+      Q(curators__in=allowed_users) | 
+      Q(created_by__in=allowed_users)
+    ).distinct()
 
   def get_serializer_class(self):
     if self.action == 'list':
@@ -1339,8 +1345,14 @@ class WorkViewSet(viewsets.ModelViewSet):
     user = self.request.user
     if user.is_superuser or user.is_staff:
       return Works.objects.all()
+    managed_users = list(ProfileHR.objects.filter(direct_manager=user).values_list('user', flat=True))
+    allowed_users = managed_users + [user.id]
+
     return Works.objects.filter(
-      Q(assigned_to=user) | Q(assigned_by=user) | Q(managers=user)
+      Q(assigned_to__in=allowed_users) | 
+      Q(assigned_by__in=allowed_users) | 
+      Q(managers__in=allowed_users) | 
+      Q(created_by__in=allowed_users)
     ).distinct()
 
   def get_serializer_class(self):
