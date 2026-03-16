@@ -186,13 +186,17 @@ def create_user_social_profile(sender, instance, created, **kwargs):
     """Auto-create UserSocialProfile and add to company groups when a new User account is created"""
     if created:
         UserSocialProfile.objects.create(user=instance)
+        
+        # Determine role: Admin if superuser, otherwise Member
+        role = 1 if instance.is_superuser else 4
+        
         # Auto-add new user as a member of all company SocialGroups
         company_groups = SocialGroup.objects.filter(is_company=True)
         for group in company_groups:
             SocialGroupMember.objects.get_or_create(
                 social_group=group,
                 user=instance,
-                defaults={'role': 4, 'status': 1}  # Member, Active
+                defaults={'role': role, 'status': 1}  # Admin (1) or Member (4), Active
             )
 
 class PostAttachment(BaseCreateUpdateDeleteModel):

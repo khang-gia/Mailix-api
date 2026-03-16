@@ -80,7 +80,7 @@ class Command(BaseCommand):
             _, created = SocialGroupMember.objects.get_or_create(
                 social_group=company_group,
                 user=user,
-                defaults={'role': 4, 'status': 1}  # Member, Active
+                defaults={'role': 1 if user.is_superuser else 4, 'status': 1}  # Admin (1) or Member (4), Active
             )
             if created:
                 added_count += 1
