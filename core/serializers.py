@@ -384,7 +384,13 @@ class CustomerDetailSerializer(serializers.ModelSerializer):
 
         return avatar_url
       return None
+class WorkMinimalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Works
+        fields = ['id', 'name']
+
 class ScheduleEventSerializer(serializers.ModelSerializer):
+    work_detail = WorkMinimalSerializer(source='work', read_only=True)
     class Meta:
         model = ScheduleEvent
         fields = '__all__'
@@ -409,6 +415,7 @@ class ScheduleEventSerializer(serializers.ModelSerializer):
 
 class ScheduleEventListSerializer(serializers.ModelSerializer):
     user = UserHRViewSerializer(read_only=True)
+    work_detail = WorkMinimalSerializer(source='work', read_only=True)
     class Meta:
         model = ScheduleEvent
         exclude = [ 'participants']
@@ -416,6 +423,7 @@ class ScheduleEventListSerializer(serializers.ModelSerializer):
 class ScheduleEventDetailSerializer(serializers.ModelSerializer):
     user = UserHRViewSerializer(read_only=True)
     participants = UserListSerializer(read_only=True, many=True)
+    work_detail = WorkMinimalSerializer(source='work', read_only=True)
     
     class Meta:
         model = ScheduleEvent
