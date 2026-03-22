@@ -218,6 +218,16 @@ class ProfileHRSerializer(serializers.ModelSerializer):
       model = ProfileHR
       fields = '__all__'
 
+    def create(self, validated_data):
+      from django.utils import timezone
+      
+      # Check if join_date is provided and is in the future
+      join_date = validated_data.get('join_date')
+      if join_date and join_date > timezone.now().date():
+          validated_data['status'] = 4
+          
+      return super().create(validated_data)
+
     def update(self, instance, validated_data):
       personal_email = validated_data.get('personal_email', None)
       print('Personal email:', personal_email)
