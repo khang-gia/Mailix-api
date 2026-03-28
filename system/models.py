@@ -62,6 +62,7 @@ class Company(BaseCreateUpdateDeleteModel):
     is_maximum_customer = models.BooleanField("Is Maximum Customer", default=False, db_index=True)
     is_maximum_contact = models.BooleanField("Is Maximum Contact", default=False, db_index=True)
     logo = models.ImageField("Logo", upload_to='company_logos/', null=True, blank=True)
+    favicon = models.ImageField("Favicon", upload_to='company_favicons/', null=True, blank=True)
     description = models.TextField("Description", null=True, blank=True)
     website = models.URLField("Website", null=True, blank=True, db_index=True)
     email = models.EmailField("Email", null=True, blank=True, db_index=True)

@@ -166,3 +166,4 @@ media/
 dump.rdb
 .vscode
 .DS_Store
+*.sqlite3
