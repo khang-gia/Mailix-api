@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR, Title, Customer, Works, WorkComment, CustomerComment, CustomerAttachment, WorkAttachment
+from .models import Profile, SystemNotification, Feedback, HappeningEvent, HotEvent, ProfileHR, Title, Customer, Works, WorkComment, CustomerComment, CustomerAttachment, WorkAttachment, UserNotification
 # Create your views here.
 from rest_framework.response import Response
 from rest_framework import status
@@ -8,7 +8,7 @@ from .serializers import UserSerializer, ProfileSerializer, LoginSerializer, Sys
   CredentialsSerializer, ProfileHRListSerializer, ProfileHRDetailSerializer, ProfileHRSerializer, UserListSerializer, TitleSerializer, TitleListSerializer, UsernameSerializer, \
     OTPSerializer, CustomerSerializer, CustomerListSerializer, CustomerDetailSerializer, WorkSerializer, WorkListSerializer, WorkDetailSerializer, WorkHistorySerializer, \
       WorkCommentSerializer, WorkCommentCreateSerializer, CustomerCommentSerializer, CustomerCommentCreateSerializer, CustomerHistorySerializer, CustomerAttachmentSerializer, \
-        CustomerAttachmentListSerializer, WorkAttachmentSerializer, WorkAttachmentListSerializer
+        CustomerAttachmentListSerializer, WorkAttachmentSerializer, WorkAttachmentListSerializer, UserNotificationSerializer
 from django_filters.rest_framework import FilterSet
 import django_filters
 from django.db.models import Q, Count
@@ -415,6 +415,19 @@ class SystemNotificationViewSet(viewsets.ReadOnlyModelViewSet):
   queryset = SystemNotification.objects.all().order_by('-created_at')[:20]
   serializer_class = SystemNotificationSerializer
   ordering_fields = []
+
+class UserNotificationViewSet(viewsets.ModelViewSet):
+  queryset = UserNotification.objects.all()
+  serializer_class = UserNotificationSerializer
+  permission_classes = [IsAuthenticated]
+
+  def get_queryset(self):
+    return self.queryset.filter(recipient=self.request.user).order_by('-created_at')
+
+  @action(detail=False, methods=['post'])
+  def mark_all_read(self, request):
+    self.get_queryset().filter(is_read=False).update(is_read=True)
+    return Response(status=status.HTTP_200_OK)
 
 class FeedbackViewSet(viewsets.ModelViewSet):
 

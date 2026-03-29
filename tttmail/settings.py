@@ -44,12 +44,14 @@ ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '').split('
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'channels',
     'django_celery_beat',
     'django_quill',
     'django_filters',
@@ -136,6 +138,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'tttmail.wsgi.application'
+ASGI_APPLICATION = 'tttmail.asgi.application'
 
 
 # Database
@@ -297,6 +300,15 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/0')],
+        },
+    },
+}
 
 
 CACHES = {

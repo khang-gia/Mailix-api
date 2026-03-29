@@ -11,6 +11,9 @@ click-plugins==1.1.1
 click-repl==0.3.0
 cron-descriptor==1.4.5
 dj-rest-auth==7.0.1
+daphne==4.1.0
+channels==4.0.0
+channels-redis==4.1.0
 Django==4.2.23
 django-celery-beat==2.7.0
 django-constance==4.3.2

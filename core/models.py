@@ -1,7 +1,7 @@
 from django.db import models
 from django.dispatch.dispatcher import receiver
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, m2m_changed
 from core.mixins.base_model import BaseModel, BaseCreateDeleteModel, BaseCreateUpdateDeleteModel, BaseCreateUpdateModel
 from simple_history.models import HistoricalRecords
 import filetype
@@ -338,6 +338,16 @@ class SystemNotification(models.Model):
 
     def __str__(self):
         return self.title
+
+class UserNotification(BaseCreateUpdateDeleteModel):
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications', db_index=True)
+    title = models.CharField("Title", max_length=200)
+    message = models.TextField("Message", null=True, blank=True)
+    link_to = models.CharField("Link to", max_length=200, null=True, blank=True)
+    is_read = models.BooleanField("Is Read", default=False, db_index=True)
+
+    def __str__(self):
+        return f"Notification for {self.recipient.username}: {self.title}"
 
 class Feedback(models.Model):
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
@@ -811,4 +821,52 @@ class WorkCommentAttachment(models.Model):
     
     def __str__(self):
         return f"Attachment for Comment {self.comment.pk}: {self.filename or 'No Name'}"
+
+
+@receiver(post_save, sender=Works)
+def notify_work_created(sender, instance, created, **kwargs):
+    if created and instance.created_by:
+        UserNotification.objects.create(
+            recipient=instance.created_by,
+            title="Công việc mới đã được tạo",
+            message=f"Bạn đã tạo công việc: {instance.name}",
+            link_to=f"/works/{instance.id}"
+        )
+
+@receiver(m2m_changed, sender=Works.assigned_to.through)
+def notify_work_assigned(sender, instance, action, pk_set, **kwargs):
+    if action == "post_add":
+        for user_id in pk_set:
+            user = User.objects.get(pk=user_id)
+            # Avoid notifying creator if they assigned it to themselves? 
+            # Usually keep it for clarity.
+            UserNotification.objects.create(
+                recipient=user,
+                title="Yêu cầu công việc mới",
+                message=f"Bạn đã được phân công công việc: {instance.name}",
+                link_to=f"/works/{instance.id}"
+            )
+
+
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
+@receiver(post_save, sender=UserNotification)
+def broadcast_notification(sender, instance, created, **kwargs):
+    if created:
+        print(f"Broadcasting notification to user_{instance.recipient.id}")
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"user_{instance.recipient.id}",
+            {
+                "type": "send_notification",
+                "content": {
+                    "id": instance.id,
+                    "title": instance.title,
+                    "message": instance.message,
+                    "link_to": instance.link_to,
+                    "created_at": instance.created_at.isoformat() if instance.created_at else None,
+                }
+            }
+        )
 

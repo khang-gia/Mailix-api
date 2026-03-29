@@ -155,6 +155,12 @@ class SystemNotificationSerializer(serializers.ModelSerializer):
     fields = '__all__'
 
 
+class UserNotificationSerializer(serializers.ModelSerializer):
+  class Meta:
+    model = UserNotification
+    fields = '__all__'
+
+
 class AuthorSerializer(serializers.ModelSerializer):
   name = serializers.SerializerMethodField(read_only=True)
   public_name = serializers.CharField(read_only=True, source='profile.public_name')
