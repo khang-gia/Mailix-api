@@ -158,7 +158,7 @@ class SystemNotificationSerializer(serializers.ModelSerializer):
 class UserNotificationSerializer(serializers.ModelSerializer):
   class Meta:
     model = UserNotification
-    fields = '__all__'
+    fields = ['id', 'title', 'message', 'link_to', 'is_read', 'notification_type', 'created_at']
 
 
 class AuthorSerializer(serializers.ModelSerializer):

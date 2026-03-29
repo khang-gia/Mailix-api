@@ -420,13 +420,19 @@ class UserNotificationViewSet(viewsets.ModelViewSet):
   queryset = UserNotification.objects.all()
   serializer_class = UserNotificationSerializer
   permission_classes = [IsAuthenticated]
+  filterset_fields = ['notification_type', 'is_read']
 
   def get_queryset(self):
     return self.queryset.filter(recipient=self.request.user).order_by('-created_at')
 
   @action(detail=False, methods=['post'])
   def mark_all_read(self, request):
-    self.get_queryset().filter(is_read=False).update(is_read=True)
+    # Support marking specific types as read if passed in query params
+    notif_type = request.query_params.get('notification_type')
+    qs = self.get_queryset().filter(is_read=False)
+    if notif_type:
+        qs = qs.filter(notification_type=notif_type)
+    qs.update(is_read=True)
     return Response(status=status.HTTP_200_OK)
 
 class FeedbackViewSet(viewsets.ModelViewSet):

@@ -7,6 +7,8 @@ from simple_history.models import HistoricalRecords
 import filetype
 import uuid
 import os
+from django.utils import timezone
+from datetime import timedelta
 # Create your models here.
 ROLE_CHOICES = (
   ('U', 'User'),
@@ -340,11 +342,17 @@ class SystemNotification(models.Model):
         return self.title
 
 class UserNotification(BaseCreateUpdateDeleteModel):
+    NOTIFICATION_TYPES = (
+        (1, 'WORK'),
+        (2, 'CONTACT'),
+        (3, 'CUSTOMER'),
+    )
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications', db_index=True)
     title = models.CharField("Title", max_length=200)
     message = models.TextField("Message", null=True, blank=True)
     link_to = models.CharField("Link to", max_length=200, null=True, blank=True)
     is_read = models.BooleanField("Is Read", default=False, db_index=True)
+    notification_type = models.IntegerField(choices=NOTIFICATION_TYPES, default=1, db_index=True)
 
     def __str__(self):
         return f"Notification for {self.recipient.username}: {self.title}"
@@ -826,25 +834,89 @@ class WorkCommentAttachment(models.Model):
 @receiver(post_save, sender=Works)
 def notify_work_created(sender, instance, created, **kwargs):
     if created and instance.created_by:
-        UserNotification.objects.create(
+        notif = UserNotification(
             recipient=instance.created_by,
             title="Công việc mới đã được tạo",
             message=f"Bạn đã tạo công việc: {instance.name}",
-            link_to=f"/works/{instance.id}"
+            link_to=f"/works/{instance.id}",
+            notification_type=1
         )
+        notif._should_toast = False
+        notif.save()
 
 @receiver(m2m_changed, sender=Works.assigned_to.through)
 def notify_work_assigned(sender, instance, action, pk_set, **kwargs):
     if action == "post_add":
         for user_id in pk_set:
             user = User.objects.get(pk=user_id)
-            # Avoid notifying creator if they assigned it to themselves? 
-            # Usually keep it for clarity.
+            # Avoid notifying creator if they already got the "Created" notification
+            if instance.created_by == user:
+                continue
+            
+            # De-duplication: Check if a similar notification was sent recently (last 1 minute)
+            if UserNotification.objects.filter(
+                recipient=user,
+                link_to=f"/works/{instance.id}",
+                notification_type=1,
+                created_at__gte=timezone.now() - timedelta(minutes=1)
+            ).exists():
+                continue
+
             UserNotification.objects.create(
                 recipient=user,
                 title="Yêu cầu công việc mới",
                 message=f"Bạn đã được phân công công việc: {instance.name}",
-                link_to=f"/works/{instance.id}"
+                link_to=f"/works/{instance.id}",
+                notification_type=1
+            )
+
+@receiver(post_save, sender=Customer)
+def notify_customer_created(sender, instance, created, **kwargs):
+    """
+    Notify curators when a new Contact or Customer is created.
+    stage=1 is CONTACT, stage=2+ is CUSTOMER.
+    """
+    if created:
+        # If created_by is set, maybe notify them?
+        if instance.created_by:
+            notif_type = 2 if instance.stage == 1 else 3
+            title = "Liên hệ mới" if instance.stage == 1 else "Khách hàng mới"
+            notif = UserNotification(
+                recipient=instance.created_by,
+                title=f"Đã tạo {title.lower()}",
+                message=f"Bạn đã tạo {title.lower()}: {instance.name}",
+                link_to=f"/customers/{instance.id}",
+                notification_type=notif_type
+            )
+            notif._should_toast = False
+            notif.save()
+
+@receiver(m2m_changed, sender=Customer.curators.through)
+def notify_customer_assigned(sender, instance, action, pk_set, **kwargs):
+    if action == "post_add":
+        notif_type = 2 if instance.stage == 1 else 3
+        title = "Phụ trách liên hệ" if instance.stage == 1 else "Phụ trách khách hàng"
+        for user_id in pk_set:
+            user = User.objects.get(pk=user_id)
+            # Avoid notifying creator if they already got the "Created" notification
+            if instance.created_by == user:
+                continue
+            
+            # De-duplication: Check if a similar notification was sent recently (last 1 minute)
+            if UserNotification.objects.filter(
+                recipient=user,
+                link_to=f"/customers/{instance.id}",
+                notification_type=notif_type,
+                created_at__gte=timezone.now() - timedelta(minutes=1)
+            ).exists():
+                continue
+
+            UserNotification.objects.create(
+                recipient=user,
+                title=title,
+                message=f"Bạn đã được phân công phụ trách {instance.name}",
+                link_to=f"/customers/{instance.id}",
+                notification_type=notif_type
             )
 
 
@@ -854,7 +926,8 @@ from asgiref.sync import async_to_sync
 @receiver(post_save, sender=UserNotification)
 def broadcast_notification(sender, instance, created, **kwargs):
     if created:
-        print(f"Broadcasting notification to user_{instance.recipient.id}")
+        should_toast = getattr(instance, '_should_toast', True)
+        print(f"Broadcasting notification to user_{instance.recipient.id} (toast={should_toast})")
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
             f"user_{instance.recipient.id}",
@@ -865,6 +938,8 @@ def broadcast_notification(sender, instance, created, **kwargs):
                     "title": instance.title,
                     "message": instance.message,
                     "link_to": instance.link_to,
+                    "should_toast": should_toast,
+                    "notification_type": instance.notification_type,
                     "created_at": instance.created_at.isoformat() if instance.created_at else None,
                 }
             }
