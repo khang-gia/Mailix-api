@@ -99,6 +99,22 @@ class ScheduleEventViewSet(viewsets.ModelViewSet):
       return ScheduleEventDetailSerializer
     return ScheduleEventSerializer
 
+  def get_queryset(self):
+    user = self.request.user
+    if user.is_anonymous:
+        return self.queryset.none()
+    
+    # Check if user is admin (Superuser or Admin/System Admin role)
+    is_admin = user.is_superuser
+    if not is_admin and hasattr(user, 'profile'):
+        is_admin = user.profile.role in ['A', 'SA', 'RA']
+        
+    if is_admin:
+        return self.queryset
+    
+    # Non-admins only see events they created or are participating in
+    return self.queryset.filter(Q(user=user) | Q(participants=user)).distinct()
+
 
 class BusinessUnitFilter(FilterSet):
     search = django_filters.CharFilter(method='elastic_search')
