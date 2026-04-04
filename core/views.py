@@ -1277,9 +1277,11 @@ class WorkFilter(FilterSet):
   in_date = django_filters.CharFilter(method='filter_in_date')
   today_task = django_filters.BooleanFilter(method='filter_today_task')
   related_task = django_filters.BooleanFilter(method='filter_related_task')
+  related_work__isnull = django_filters.BooleanFilter(field_name='related_work', lookup_expr='isnull')
+  exclude_id = django_filters.NumberFilter(field_name='id', exclude=True)
   class Meta:
     model = Works
-    fields = ['name', 'assigned_to','status','code', 'priority','start_date','end_date','assigned_by', 'managers']
+    fields = ['name', 'assigned_to','status','code', 'priority','start_date','end_date','assigned_by', 'managers', 'related_work']
 
   def filter_assigned_to_isnull(self, queryset, name, value):
     if value:

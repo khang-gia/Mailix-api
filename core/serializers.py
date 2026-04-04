@@ -476,7 +476,7 @@ class WorkSerializer(serializers.ModelSerializer):
       assigned_to = validated_data.pop('assigned_to', None)
       assigned_by = validated_data.pop('assigned_by', None)
       managers = validated_data.pop('managers', None)
-      # schedule_data = validated_data.pop('schedule', None)
+      schedule_data = validated_data.pop('schedule', None)
 
       for attr, value in validated_data.items():
         setattr(instance, attr, value)
@@ -487,14 +487,24 @@ class WorkSerializer(serializers.ModelSerializer):
         instance.assigned_by.set(assigned_by)
       if managers is not None:
         instance.managers.set(managers)
-      # if schedule_data:
-      #   try:
-      #     schedule_event = ScheduleEvent.objects.get(work=instance)
-      #     for attr, value in schedule_data.items():
-      #       setattr(schedule_event, attr, value)
-      #     schedule_event.save()
-      #   except ScheduleEvent.DoesNotExist:
-      #     ScheduleEvent.objects.create(work=instance, **schedule_data)
+      if schedule_data:
+        try:
+          schedule_event = instance.schedule_events.first()
+          if not schedule_event:
+             # Create new one if not exists
+             participants = schedule_data.pop('participants', [])
+             schedule_data['user'] = instance.created_by if not schedule_data.get('user') else schedule_data['user']
+             schedule_event = ScheduleEvent.objects.create(work=instance, **schedule_data)
+             schedule_event.participants.set(participants)
+          else:
+             participants = schedule_data.pop('participants', None)
+             for attr, value in schedule_data.items():
+               setattr(schedule_event, attr, value)
+             if participants is not None:
+               schedule_event.participants.set(participants)
+             schedule_event.save()
+        except Exception as e:
+           print(f"Error updating schedule event: {e}")
       instance.save()
       return instance
 
@@ -522,9 +532,19 @@ class WorkDetailSerializer(serializers.ModelSerializer):
 
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
+    related_work_name = serializers.CharField(source='related_work.name', read_only=True)
+    related_work = WorkMinimalSerializer(read_only=True)
+    schedule = serializers.SerializerMethodField()
+
     class Meta:
         model = Works
         fields = '__all__'
+
+    def get_schedule(self, obj):
+        schedule = obj.schedule_events.first()
+        if schedule:
+            return ScheduleEventSerializer(schedule, context=self.context).data
+        return None
 
 class WorkHistorySerializer(serializers.ModelSerializer):
     assigned_to = UserListSerializer(read_only=True, many=True)
