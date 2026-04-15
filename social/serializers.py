@@ -216,6 +216,24 @@ class PostCreateSerializer(serializers.ModelSerializer):
         
         return post
 
+    def update(self, instance, validated_data):
+        # Pop poll_options before calling super().update() to prevent DRF's default
+        # update() from calling instance.poll_options.set([list_of_strings]) which
+        # fails because it expects PollOption instances/PKs, not raw strings.
+        poll_options_data = validated_data.pop('poll_options', None)
+
+        # Update all other fields normally
+        instance = super().update(instance, validated_data)
+
+        # If poll options were provided and post is a Poll type, rebuild them
+        if poll_options_data is not None and instance.post_type == 2:
+            instance.poll_options.all().delete()
+            for option_text in poll_options_data:
+                if option_text.strip():
+                    PollOption.objects.create(post=instance, option=option_text.strip())
+
+        return instance
+
 class PostListSerializer(serializers.ModelSerializer):
     author = UserSocialViewSerializer(read_only=True)
     social_group_name = serializers.CharField(source='social_group.name', read_only=True)
