@@ -323,6 +323,7 @@ class ProfileHR(BaseCreateUpdateDeleteModel):
     group = models.ForeignKey('system.SystemGroup',  on_delete=models.SET_NULL, related_name="profile_hrs", null=True, blank=True)
     is_first_login = models.BooleanField('Is First Login', default=True)
     is_demo_account = models.BooleanField('Is Demo Account', default=False)
+    locale = models.CharField("Locale", max_length=10, default='vi', null=True, blank=True)
     history = HistoricalRecords()
 
     def __str__(self):
