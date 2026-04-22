@@ -96,6 +96,7 @@ class Department(BaseCreateUpdateDeleteModel):
     department_type = models.IntegerField("Department Type", choices=DEPARTMENT_TYPES, default=1)
     # company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name="departments",db_index=True)
     group = models.ForeignKey('SystemGroup', on_delete=models.SET_NULL, null=True, blank=True, related_name='departments', db_index=True)
+    resources = models.ManyToManyField('SystemResource', related_name='departments_assigned', db_index=True, blank=True)
     config_volume = models.ForeignKey('ConfigVolume', on_delete=models.SET_NULL, null=True, blank=True, related_name='departments', db_index=True)
     history = HistoricalRecords()
 
