@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import *
 from system.models import ScheduleEvent
-from system.serializers import DepartmentListSerializer
+from system.serializers import DepartmentListSerializer, SystemGroupSerializer
 import json
 from rest_framework.exceptions import ValidationError
 from django.db import transaction
@@ -458,11 +458,13 @@ class WorkSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
       assigned_to = validated_data.pop('assigned_to', [])
+      assigned_groups = validated_data.pop('assigned_groups', [])
       assigned_by = validated_data.pop('assigned_by', [])
       managers = validated_data.pop('managers', [])
       schedule_data = validated_data.pop('schedule', None)
       work = Works.objects.create(**validated_data)
       work.assigned_to.set(assigned_to)
+      work.assigned_groups.set(assigned_groups)
       work.assigned_by.set(assigned_by)
       work.managers.set(managers)
       if schedule_data:
@@ -474,6 +476,7 @@ class WorkSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
       assigned_to = validated_data.pop('assigned_to', None)
+      assigned_groups = validated_data.pop('assigned_groups', None)
       assigned_by = validated_data.pop('assigned_by', None)
       managers = validated_data.pop('managers', None)
       schedule_data = validated_data.pop('schedule', None)
@@ -483,6 +486,8 @@ class WorkSerializer(serializers.ModelSerializer):
       
       if assigned_to is not None:
         instance.assigned_to.set(assigned_to)
+      if assigned_groups is not None:
+        instance.assigned_groups.set(assigned_groups)
       if assigned_by is not None:
         instance.assigned_by.set(assigned_by)
       if managers is not None:
@@ -512,6 +517,7 @@ class WorkListSerializer(serializers.ModelSerializer):
     assigned_to = UserHRViewSerializer(read_only=True, many=True)
     assigned_by = UserHRViewSerializer(read_only=True, many=True)
     managers = UserHRViewSerializer(read_only=True, many=True)
+    assigned_groups = SystemGroupSerializer(read_only=True, many=True)
     created_by = UserHRViewSerializer(read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     related_work_name = serializers.CharField(source='related_work.name', read_only=True)
@@ -529,6 +535,8 @@ class WorkDetailSerializer(serializers.ModelSerializer):
 
     managers = UserListSerializer(read_only=True, many=True)
     managers_list = UserHRViewSerializer(read_only=True, many=True, source='managers')
+
+    assigned_groups = SystemGroupSerializer(read_only=True, many=True)
 
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)

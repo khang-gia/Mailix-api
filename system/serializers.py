@@ -1,5 +1,6 @@
 from .models import *
 from rest_framework import serializers
+from django.contrib.auth.models import User
 
 class SystemResourceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -14,22 +15,22 @@ class SystemGroupSerializer(serializers.ModelSerializer):
         model = SystemGroup
         fields = '__all__'
 
-    def create(self, validated_data):
-      resources = validated_data.pop('resources', [])
-      group = SystemGroup.objects.create(**validated_data)
-      group.resources.set(resources)
-      return group
+    # def create(self, validated_data):
+    #   resources = validated_data.pop('resources', [])
+    #   group = SystemGroup.objects.create(**validated_data)
+    #   group.resources.set(resources)
+    #   return group
 
-    def update(self, instance, validated_data):
-      resources = validated_data.pop('resources', None)
-      for attr, value in validated_data.items():
-        setattr(instance, attr, value)
+    # def update(self, instance, validated_data):
+    #   resources = validated_data.pop('resources', None)
+    #   for attr, value in validated_data.items():
+    #     setattr(instance, attr, value)
       
-      if resources is not None:
-        instance.resources.set(resources)
+    #   if resources is not None:
+    #     instance.resources.set(resources)
 
-      instance.save()
-      return instance
+    #   instance.save()
+    #   return instance
 
 class SystemGroupListSerializer(serializers.ModelSerializer):
     # resources = SystemResourceSerializer(read_only=True, many=True)
@@ -37,8 +38,18 @@ class SystemGroupListSerializer(serializers.ModelSerializer):
         model = SystemGroup
         fields = '__all__'
 
+class SystemGroupUserSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField(read_only=True)
+    class Meta:
+        model = User
+        fields = ('id', 'full_name')
+
+    def get_full_name(self, obj):
+        return '%s %s'%(obj.first_name, obj.last_name) if obj.first_name else obj.username if not hasattr(obj, 'profile_hr') else obj.profile_hr.full_name
+
 class SystemGroupDetailSerializer(serializers.ModelSerializer):
     resources = SystemResourceSerializer(read_only=True, many=True)
+    users = SystemGroupUserSerializer(read_only=True, many=True)
 
     class Meta:
         model = SystemGroup

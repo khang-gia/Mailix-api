@@ -763,6 +763,7 @@ class Works(BaseCreateUpdateDeleteModel):
     end_date = models.DateTimeField("End Date", null=True, blank=True, db_index=True)
     actual_start_date = models.DateTimeField("Actual start Date", null=True, blank=True, db_index=True)
     assigned_to = models.ManyToManyField(User, related_name='works', blank=True, db_index=True)
+    assigned_groups = models.ManyToManyField('system.SystemGroup', related_name='assigned_works', blank=True, db_index=True)
     assigned_by = models.ManyToManyField(User, related_name='assigned_works', blank=True, db_index=True)
     assigned_at = models.DateTimeField("Assigned At", null=True, blank=True, db_index=True)
     managers = models.ManyToManyField(User, related_name='managed_works', blank=True, db_index=True)
@@ -870,6 +871,36 @@ def notify_work_assigned(sender, instance, action, pk_set, **kwargs):
                 link_to=f"/works/{instance.id}",
                 notification_type=1
             )
+
+@receiver(m2m_changed, sender=Works.assigned_groups.through)
+def notify_work_assigned_group(sender, instance, action, pk_set, **kwargs):
+    if action == "post_add":
+        from system.models import SystemGroup
+        for group_id in pk_set:
+            group = SystemGroup.objects.get(pk=group_id)
+            # Find all active users belonging to this group
+            users = User.objects.filter(profile_hr__group=group, is_active=True)
+            for user in users:
+                # Avoid notifying creator
+                if instance.created_by == user:
+                    continue
+                
+                # De-duplication
+                if UserNotification.objects.filter(
+                    recipient=user,
+                    link_to=f"/works/{instance.id}",
+                    notification_type=1,
+                    created_at__gte=timezone.now() - timedelta(minutes=1)
+                ).exists():
+                    continue
+
+                UserNotification.objects.create(
+                    recipient=user,
+                    title="Yêu cầu công việc mới",
+                    message=f"Bạn đã được phân công công việc: {instance.name} (thông qua nhóm: {group.name})",
+                    link_to=f"/works/{instance.id}",
+                    notification_type=1
+                )
 
 @receiver(post_save, sender=Customer)
 def notify_customer_created(sender, instance, created, **kwargs):

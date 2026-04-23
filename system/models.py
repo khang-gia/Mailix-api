@@ -138,7 +138,8 @@ class SystemGroup(BaseCreateUpdateDeleteModel):
     name = models.CharField("Name", max_length=50, db_index=True)
     code = models.CharField("Code", max_length=20, null=True, blank=True, db_index=True)
     description = models.TextField("Description", null=True, blank=True)
-    resources = models.ManyToManyField(SystemResource, related_name='groups', db_index=True)
+    resources = models.ManyToManyField(SystemResource, related_name='groups', db_index=True, blank=True)
+    users = models.ManyToManyField(User, related_name='member_groups', blank=True)
     # account_type = models.ForeignKey("AccountType", on_delete=models.SET_NULL, null=True, blank=True, related_name="system_groups", db_index=True)
 
     history = HistoricalRecords()
