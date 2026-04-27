@@ -32,12 +32,6 @@ class SystemGroupSerializer(serializers.ModelSerializer):
     #   instance.save()
     #   return instance
 
-class SystemGroupListSerializer(serializers.ModelSerializer):
-    # resources = SystemResourceSerializer(read_only=True, many=True)
-    class Meta:
-        model = SystemGroup
-        fields = '__all__'
-
 class SystemGroupUserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField(read_only=True)
     class Meta:
@@ -46,6 +40,13 @@ class SystemGroupUserSerializer(serializers.ModelSerializer):
 
     def get_full_name(self, obj):
         return '%s %s'%(obj.first_name, obj.last_name) if obj.first_name else obj.username if not hasattr(obj, 'profile_hr') else obj.profile_hr.full_name
+
+class SystemGroupListSerializer(serializers.ModelSerializer):
+    # resources = SystemResourceSerializer(read_only=True, many=True)
+    users = SystemGroupUserSerializer(read_only=True, many=True)
+    class Meta:
+        model = SystemGroup
+        fields = '__all__'
 
 class SystemGroupDetailSerializer(serializers.ModelSerializer):
     resources = SystemResourceSerializer(read_only=True, many=True)
