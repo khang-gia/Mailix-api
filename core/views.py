@@ -1292,12 +1292,12 @@ class WorkFilter(FilterSet):
     if not value:
       return queryset
     
-    fields = ['name__icontains','code__icontains']
+    fields = ['name__icontains','code__icontains', 'sub_works__name__icontains']
     _q = Q()
     for field in fields:
       _q = _q | Q(**{field: value})
 
-    return queryset.filter(_q)
+    return queryset.filter(_q).distinct()
 
   def filter_assigned_to_person(self, queryset, name, value):
     return queryset.filter(assigned_to__id=value)  # Filter by a specific curator ID
