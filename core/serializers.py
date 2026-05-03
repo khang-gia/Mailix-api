@@ -555,16 +555,15 @@ class WorkDetailSerializer(serializers.ModelSerializer):
         return None
 
 class WorkHistorySerializer(serializers.ModelSerializer):
-    assigned_to = UserListSerializer(read_only=True, many=True)
-    assigned_by = UserListSerializer(read_only=True, many=True)
-    managers = UserListSerializer(read_only=True, many=True)
     history_type_display = serializers.CharField(source='get_history_type_display', read_only=True)
     history_user = UserListSerializer(read_only=True)
     field_changes = serializers.SerializerMethodField()
+
     def __init__(self, model, *args, fields='__all__', **kwargs):
         self.Meta.model = model
         self.Meta.fields = fields
         super().__init__()
+
     class Meta:
         pass
     
@@ -588,13 +587,53 @@ class WorkHistorySerializer(serializers.ModelSerializer):
             
             changes_list = []
             
-            display_fields =[ 'status', 'priority']
-            # 3. Iterate over the ModelChange objects, old and new values need to be a string
+            display_fields = ['status', 'priority']
+            m2m_fields = ['assigned_to', 'assigned_by', 'managers', 'assigned_groups']
+
+            from django.contrib.auth.models import User as DjangoUser
+
+            def format_m2m_item(obj):
+                # django-simple-history returns M2M diffs as plain dicts e.g. {'works': 8, 'user': 1}
+                if isinstance(obj, dict):
+                    user_id = obj.get('user')
+                    if user_id:
+                        try:
+                            u = DjangoUser.objects.get(pk=user_id)
+                            return u.get_full_name() or u.username
+                        except DjangoUser.DoesNotExist:
+                            return str(user_id)
+                    group_id = obj.get('systemgroup')
+                    if group_id:
+                        try:
+                            from system.models import SystemGroup
+                            g = SystemGroup.objects.get(pk=group_id)
+                            return g.name
+                        except Exception:
+                            return str(group_id)
+                    return str(obj)
+                # Fallback for model instances
+                if hasattr(obj, 'user'):
+                    u = obj.user
+                    return u.get_full_name() or u.username
+                if hasattr(obj, 'systemgroup'):
+                    return getattr(obj.systemgroup, 'name', str(obj.systemgroup))
+                if hasattr(obj, 'get_full_name'):
+                    return obj.get_full_name() or obj.username
+                return getattr(obj, 'name', str(obj))
+
+            # 3. Iterate over the ModelChange objects
             for change in delta.changes:
+              if change.field in m2m_fields:
+                old_val = ", ".join([format_m2m_item(obj) for obj in change.old]) if change.old else None
+                new_val = ", ".join([format_m2m_item(obj) for obj in change.new]) if change.new else None
+              else:
+                old_val = str(change.old) if change.old is not None else None
+                new_val = str(change.new) if change.new is not None else None
+
               diff_to_append = {
                   'field': change.field,
-                  'old_value': str(change.old) if change.old is not None else None,
-                  'new_value': str(change.new) if change.new is not None else None,
+                  'old_value': old_val,
+                  'new_value': new_val,
               }
               if change.field in display_fields:
                 # Get display values for choice fields
@@ -611,6 +650,7 @@ class WorkHistorySerializer(serializers.ModelSerializer):
             return [{'field': 'object', 'old_value': None, 'new_value': 'Created'}]
             
         return []
+
 
 # Attachment Serializers
 class WorkCommentAttachmentSerializer(serializers.ModelSerializer):

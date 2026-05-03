@@ -773,7 +773,7 @@ class Works(BaseCreateUpdateDeleteModel):
     progress = models.PositiveIntegerField(default=0)
     related_work = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_works', db_index=True)
     brief = models.TextField("Brief", null=True, blank=True)
-    history = HistoricalRecords()
+    history = HistoricalRecords(m2m_fields=['assigned_to', 'assigned_by', 'managers', 'assigned_groups'])
 
     def __str__(self):
         return "Work <{}> {}".format(self.pk, self.name)

@@ -1505,6 +1505,17 @@ class WorkViewSet(viewsets.ModelViewSet):
       serializer = WorkHistorySerializer(model, works_history, many=True)
       serializer.is_valid()
 
+      # Filter out empty records — when only M2M fields change, django-simple-history
+      # creates two records: one empty (from parent save()) and one with the M2M diff.
+      # We keep only records that are 'created' (+), 'deleted' (-), or have actual changes (~).
+      filtered_data = []
+      for record in serializer.data:
+          history_type = record.get('history_type')
+          field_changes = record.get('field_changes', [])
+          # Always include creates/deletes; for updates, only include if there are real changes
+          if history_type in ('+', '-') or field_changes:
+              filtered_data.append(record)
+
       # Get attachment history
       from .models import WorkAttachment
       attachment_history = WorkAttachment.historical.filter(work_id=pk).order_by('-history_date')
@@ -1539,7 +1550,7 @@ class WorkViewSet(viewsets.ModelViewSet):
           })
       
       # Combine and sort by date
-      combined_history = list(serializer.data) + attachment_events
+      combined_history = filtered_data + attachment_events
       combined_history.sort(key=lambda x: x.get('created_at') or x.get('history_date'), reverse=True)
       
       return Response(combined_history, status=status.HTTP_200_OK)
