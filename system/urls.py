@@ -10,4 +10,6 @@ router.register(r'resources', views.SystemResourceViewSet)
 router.register(r'groups', views.SystemGroupViewSet)
 router.register(r'company', views.CompanyViewSet)
 urlpatterns = router.urls + [
+    path('config/', views.system_config, name='system_config'),
+    path('admin-config/', views.system_admin_config, name='system_admin_config'),
 ]

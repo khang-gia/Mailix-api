@@ -12,7 +12,9 @@ from .serializers import *
 from rest_framework.permissions import IsAuthenticated
 import django_filters
 from core.serializers import ScheduleEventSerializer, ScheduleEventListSerializer, ScheduleEventDetailSerializer
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
+from constance import config
+from django.conf import settings
 
 class DepartmentFilter(FilterSet):
     search = django_filters.CharFilter(method='elastic_search')
@@ -240,4 +242,43 @@ class CompanyViewSet(viewsets.ModelViewSet):
   filterset_class = CompanyFilter
   ordering_fields = ['id']
   ordering = ('-id',)
-  
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def system_config(request):
+    return Response({
+        'MAIL_SERVER_URL': config.MAIL_SERVER_URL,
+    })
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def system_admin_config(request):
+    user = request.user
+    is_admin = user.is_superuser
+    if not is_admin and hasattr(user, 'profile'):
+        is_admin = user.profile.role in ['A', 'SA', 'RA']
+    
+    if not is_admin:
+        return Response({'detail': 'You do not have permission to perform this action.'}, status=status.HTTP_403_FORBIDDEN)
+        
+    if request.method == 'GET':
+        data = []
+        for key, options in settings.CONSTANCE_CONFIG.items():
+            default = options[0]
+            help_text = options[1] if len(options) > 1 else ''
+            value = getattr(config, key)
+            data.append({
+                'key': key,
+                'value': value,
+                'default': default,
+                'help_text': help_text,
+            })
+        return Response(data)
+    
+    elif request.method == 'POST':
+        for item in request.data:
+            key = item.get('key')
+            value = item.get('value')
+            if key in settings.CONSTANCE_CONFIG:
+                setattr(config, key, value)
+        return Response({'status': 'ok'})
