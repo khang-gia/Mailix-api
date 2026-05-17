@@ -109,3 +109,23 @@ def set_mail_user_password(email, password):
         "password": password,
     }
     return post_data("/admin/mail/users/password", data)
+
+def remove_mail_user(email):
+    data = {"email": email}
+    return post_data("/admin/mail/users/remove", data)
+
+def add_mail_alias(source, destination):
+    """
+    Forward emails sent to `source` to `destination`.
+    Used when renaming an email: old_email -> new_email so old mail
+    still arrives at the new mailbox.
+    """
+    data = {
+        "address": source,
+        "forwards_to": destination,
+    }
+    return post_data("/admin/mail/aliases/add", data)
+
+def remove_mail_alias(source):
+    data = {"address": source}
+    return post_data("/admin/mail/aliases/remove", data)

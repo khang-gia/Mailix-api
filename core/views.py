@@ -30,7 +30,7 @@ from django.contrib.auth.hashers import make_password, check_password
 from system.models import TrustedDevice
 from django.utils import timezone
 from core.utils import generate_secure_password
-from system.miab import add_mail_user, set_mail_user_password
+from system.miab import add_mail_user, set_mail_user_password, add_mail_alias
 from django.db import transaction
 from django.http import HttpResponse
 from datetime import datetime
@@ -711,6 +711,97 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
     except Exception as e:
       return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+  @action(detail=True, methods=['post'])
+  def change_email(self, request, pk=None):
+    """
+    Change the company email (MIAB email) of a profile HR.
+    Strategy:
+      1. Verify current_password against Django user (so new MIAB account
+         gets the exact same password — keeps HRM ↔ MIAB in sync).
+      2. Create new MIAB user with new_email + verified password.
+      3. Add alias: old_email -> new_email (old mailbox preserved, mail forwarded).
+      4. Update profile_hr.email in DB.
+    The Mailix login (Django username/password) is completely unaffected.
+    """
+    import logging
+    import re
+    logger = logging.getLogger('miab')
+
+    profile_hr = self.get_object()
+
+    if not profile_hr.user:
+      return Response(
+        {'detail': 'This profile does not have an associated user account.'},
+        status=status.HTTP_400_BAD_REQUEST
+      )
+
+    new_email = request.data.get('new_email', '').strip().lower()
+    current_password = request.data.get('current_password', '').strip()
+
+    # Validate new email
+    if not new_email:
+      return Response({'detail': 'New email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    email_regex = r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_regex, new_email):
+      return Response({'detail': 'Invalid email format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not current_password:
+      return Response({'detail': 'Current password is required to sync the mail account.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Verify the provided password matches the Django user's password
+    if not profile_hr.user.check_password(current_password):
+      return Response({'detail': 'Current password is incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    old_email = profile_hr.email
+
+    if old_email and old_email.lower() == new_email:
+      return Response({'detail': 'New email is the same as the current email.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Check if new email is already used by another profile
+    if ProfileHR.objects.filter(email__iexact=new_email).exclude(pk=profile_hr.pk).exists():
+      return Response(
+        {'detail': 'This email address is already in use by another account.'},
+        status=status.HTTP_400_BAD_REQUEST
+      )
+
+    # Use the verified plaintext password so the new MIAB account has the
+    # same password as the current HRM/Django account — keeps them in sync.
+    miab_password = current_password
+
+    # --- Step 1: Create new MIAB account with the same password ---
+    success_add, res_add = add_mail_user(new_email, miab_password)
+    if not success_add:
+      logger.warning(f'[change_email] Failed to create new MIAB account {new_email}: {res_add}')
+      return Response(
+        {'detail': 'Failed to change email.'},
+        status=status.HTTP_400_BAD_REQUEST
+      )
+    logger.info(f'[change_email] Created MIAB account: {new_email}')
+
+    # --- Step 2: Add alias old_email -> new_email (preserve old mailbox, forward mail) ---
+    if old_email:
+      success_alias, res_alias = add_mail_alias(old_email, new_email)
+      if not success_alias:
+        logger.warning(f'[change_email] Failed to add alias {old_email} -> {new_email}: {res_alias}')
+        return Response(
+          {'detail': 'Failed to change email.'},
+          status=status.HTTP_400_BAD_REQUEST
+        )
+      logger.info(f'[change_email] Added alias: {old_email} -> {new_email}')
+
+    # --- Step 3: Update DB (only reached if all MIAB steps succeeded) ---
+    profile_hr.email = new_email
+    profile_hr.save(update_fields=['email'])
+
+    logger.info(f'[change_email] DB updated: profile {profile_hr.pk} email -> {new_email}')
+
+    return Response({
+      'detail': 'Email changed successfully.',
+      'new_email': new_email,
+    }, status=status.HTTP_200_OK)
+
 
   @action(detail=False, methods=['get'])
   def export_profile_hrs(self, request, pk=None):
