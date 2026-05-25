@@ -123,6 +123,7 @@ def add_mail_alias(source, destination):
     data = {
         "address": source,
         "forwards_to": destination,
+        "update_if_exists": 1,
     }
     return post_data("/admin/mail/aliases/add", data)
 
