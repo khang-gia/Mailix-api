@@ -114,15 +114,34 @@ def remove_mail_user(email):
     data = {"email": email}
     return post_data("/admin/mail/users/remove", data)
 
+def list_mail_aliases():
+    data = get_data("/admin/mail/aliases")
+    return data if data else []
+
 def add_mail_alias(source, destination):
     """
     Forward emails sent to `source` to `destination`.
     Used when renaming an email: old_email -> new_email so old mail
     still arrives at the new mailbox.
     """
+    # Fetch existing aliases to prevent overwriting other forwards
+    existing_aliases = list_mail_aliases()
+    forwards = [destination]
+    
+    if isinstance(existing_aliases, list):
+        for alias in existing_aliases:
+            if alias.get('address') == source:
+                existing_forwards = alias.get('forwards_to', [])
+                if isinstance(existing_forwards, list):
+                    forwards.extend(existing_forwards)
+                break
+    
+    # Remove duplicates
+    forwards = list(set(forwards))
+    
     data = {
         "address": source,
-        "forwards_to": destination,
+        "forwards_to": "\n".join(forwards),
         "update_if_exists": 1,
     }
     return post_data("/admin/mail/aliases/add", data)

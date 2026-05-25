@@ -760,9 +760,10 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
       return Response({'detail': 'New email is the same as the current email.'}, status=status.HTTP_400_BAD_REQUEST)
 
     # Check if new email is already used by another profile
-    if ProfileHR.objects.filter(email__iexact=new_email).exclude(pk=profile_hr.pk).exists():
+    existing_profile = ProfileHR.objects.filter(email__iexact=new_email).exclude(pk=profile_hr.pk).first()
+    if existing_profile:
       return Response(
-        {'detail': 'This email address is already in use by another account.'},
+        {'detail': f'This email address is already in use by {existing_profile.full_name} ({existing_profile.employee_code}).'},
         status=status.HTTP_400_BAD_REQUEST
       )
 
@@ -774,8 +775,17 @@ class ProfileHRViewSet(viewsets.ModelViewSet):
     success_add, res_add = add_mail_user(new_email, miab_password)
     if not success_add:
       logger.warning(f'[change_email] Failed to create new MIAB account {new_email}: {res_add}')
+      
+      # Just in case it belongs to another user's personal email or similar
+      existing_by_personal = ProfileHR.objects.filter(personal_email__iexact=new_email).exclude(pk=profile_hr.pk).first()
+      if existing_by_personal:
+          return Response(
+              {'detail': f'This email address is already in use as a personal email by {existing_by_personal.full_name} ({existing_by_personal.employee_code}).'},
+              status=status.HTTP_400_BAD_REQUEST
+          )
+          
       return Response(
-        {'detail': 'Failed to change email.'},
+        {'detail': f'Failed to create mail account: {res_add}'},
         status=status.HTTP_400_BAD_REQUEST
       )
     logger.info(f'[change_email] Created MIAB account: {new_email}')
