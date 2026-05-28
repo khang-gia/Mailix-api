@@ -1057,6 +1057,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
   ordering = ('-id',)
 
   def get_queryset(self):
+    if self.request.query_params.get('deleted') == 'true':
+      return Customer.deleted_objects.all()
+
     user = self.request.user
     if user.is_superuser or user.is_staff:
       return Customer.objects.all()
@@ -1091,6 +1094,39 @@ class CustomerViewSet(viewsets.ModelViewSet):
       try:
         profile = Customer.objects.get(pk=customer_id)
         profile.delete()
+      except Customer.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+      except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(status=status.HTTP_200_OK)
+
+  @action(detail=False, methods=['post'])
+  def restore_customers(self, request, pk=None):
+    customer_ids = request.data.get('customers', [])
+    if not customer_ids:
+      return Response(status=status.HTTP_400_BAD_REQUEST)
+    for customer_id in customer_ids:
+      try:
+        profile = Customer.deleted_objects.get(pk=customer_id)
+        from django.contrib.auth.models import User
+        if not hasattr(User, 'transaction_id'):
+            User.transaction_id = None
+        profile.restore(strict=False)
+      except Customer.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+      except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(status=status.HTTP_200_OK)
+
+  @action(detail=False, methods=['post'])
+  def hard_delete_customers(self, request, pk=None):
+    customer_ids = request.data.get('customers', [])
+    if not customer_ids:
+      return Response(status=status.HTTP_400_BAD_REQUEST)
+    for customer_id in customer_ids:
+      try:
+        profile = Customer.deleted_objects.get(pk=customer_id)
+        profile.hard_delete()
       except Customer.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
       except Exception as e:

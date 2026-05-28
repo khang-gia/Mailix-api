@@ -33,6 +33,7 @@ def process_import_hr(import_id):
     success = 0
     failure = 0
     total = 0
+    errors = []
     COLS = ['join_date', 'actual_sign_date', 'full_name', 'employee_code', 'timekeeping_id', \
       'dob', 'pob', 'place_of_origin', 'gender','nationality', 'religion', 'ethnicity', 'educaional_level', \
       'years_of_experience', 'highest_qualification', 'direct_manager', 'current_address', 'permanent_address', 'email', 'personal_email','phone']
@@ -64,18 +65,21 @@ def process_import_hr(import_id):
             serializer = ProfileHRSerializer(data=import_obj)
         except Exception as e:
             print(e)
+            errors.append('Row {}: Exception - {}'.format(total, str(e)))
         if serializer and serializer.is_valid():
             profileHr = serializer.save()
             success += 1
         else:
             if serializer:
                 print(serializer.errors)
+                errors.append('Row {}: {}'.format(total, str(serializer.errors)))
             failure += 1
 
     obj.success = success
-    obj.failure = 0
+    obj.failure = failure
     obj.total = total
     obj.status = 1
+    obj.errors_log = '\n'.join(errors) if errors else None
     obj.save()
     # logger.info('Import {} has total {} update'.format(import_id, total_updated))
     wb.close()
@@ -127,6 +131,7 @@ def process_import_contact(import_id):
     success = 0
     failure = 0
     total = 0
+    errors = []
     COLS = ['name', 'customer_code', 'title', 'dob', 'gender', \
       'curators', 'address', 'email', 'phone','tax_code', 'type_of_customer', 'customer_source', 'company_name', \
       'company_phone', 'company_email', 'company_address', 'company_tax_code']
@@ -167,6 +172,7 @@ def process_import_contact(import_id):
                 except Exception as e:
                     print(e)
                     failure += 1
+                    errors.append('Row {}: Exception - {}'.format(total, str(e)))
                 if serializer and serializer.is_valid():
                     print('serializer valid')
                     customer = serializer.save()
@@ -174,15 +180,18 @@ def process_import_contact(import_id):
                 else:
                     if serializer:
                         print(serializer.errors)
+                        errors.append('Row {}: {}'.format(total, str(serializer.errors)))
                     failure += 1
         except Exception as e:
             failure += 1
-            logger.error('Upload contact has exception error:', e)
+            logger.error('Upload contact has exception error: %s', e)
+            errors.append('Row {}: Exception - {}'.format(total, str(e)))
 
     obj.success = success
     obj.failure = failure
     obj.total = total
     obj.status = 1
+    obj.errors_log = '\n'.join(errors) if errors else None
     obj.save()
     # logger.info('Import {} has total {} update'.format(import_id, total_updated))
     wb.close()
@@ -234,6 +243,7 @@ def process_import_customer(import_id):
     success = 0
     failure = 0
     total = 0
+    errors = []
     COLS = ['name', 'customer_code', 'title', 'dob', 'gender', \
       'curators', 'address', 'email', 'phone','tax_code', 'type_of_customer', 'customer_source', 'customer_group', 'company_name', \
       'company_phone', 'company_email', 'company_address', 'company_tax_code']
@@ -276,21 +286,25 @@ def process_import_customer(import_id):
                 except Exception as e:
                     print(e)
                     failure += 1
+                    errors.append('Row {}: Exception - {}'.format(total, str(e)))
                 if serializer and serializer.is_valid():
                     customer = serializer.save()
                     success += 1
                 else:
                     if serializer:
                         print(serializer.errors)
+                        errors.append('Row {}: {}'.format(total, str(serializer.errors)))
                     failure += 1
         except Exception as e:
             failure += 1
-            logger.error('Upload customer has exception error:', e)
+            logger.error('Upload customer has exception error: %s', e)
+            errors.append('Row {}: Exception - {}'.format(total, str(e)))
 
     obj.success = success
     obj.failure = failure
     obj.total = total
     obj.status = 1
+    obj.errors_log = '\n'.join(errors) if errors else None
     obj.save()
     # logger.info('Import {} has total {} update'.format(import_id, total_updated))
     wb.close()
@@ -343,6 +357,7 @@ def process_import_work(import_id):
     success = 0
     failure = 0
     total = 0
+    errors = []
     COLS = ['name', 'code', 'description','status', 'assigned_to', 'assigned_by', \
       'managers', 'start_date', 'actual_start_date', 'end_date','priority']
     for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row, max_col=len(COLS) + 1, values_only=True):
@@ -397,21 +412,25 @@ def process_import_work(import_id):
                 except Exception as e:
                     print(e)
                     failure += 1
+                    errors.append('Row {}: Exception - {}'.format(total, str(e)))
                 if serializer and serializer.is_valid():
                     work = serializer.save()
                     success += 1
                 else:
                     if serializer:
                         print(serializer.errors)
+                        errors.append('Row {}: {}'.format(total, str(serializer.errors)))
                     failure += 1
         except Exception as e:
             failure += 1
-            logger.error('Upload work has exception error:', e)
+            logger.error('Upload work has exception error: %s', e)
+            errors.append('Row {}: Exception - {}'.format(total, str(e)))
 
     obj.success = success
     obj.failure = failure
     obj.total = total
     obj.status = 1
+    obj.errors_log = '\n'.join(errors) if errors else None
     obj.save()
     # logger.info('Import {} has total {} update'.format(import_id, total_updated))
     wb.close()

@@ -55,6 +55,7 @@ class Upload(models.Model):
     failure = models.IntegerField('Failure Amt', default=0)
     errors_log = models.TextField('Error Log', null=True, blank=True)
     upload_type = models.IntegerField('Upload Type', default=1, choices=UPLOAD_TYPES)
+    task_id = models.CharField('Task ID', max_length=100, null=True, blank=True)
   
     def __str__(self) -> str:
         return "Upload <{}> {}: {}".format(self.pk, self.upload_type, self.get_status_display())
@@ -77,16 +78,20 @@ def upload_save_signal(sender, instance, created, *kargs, **kwargs):
         instance.status = 3
         instance.save()
         try:
+            task = None
             if instance.upload_type == 1:
-                process_import_hr.delay(instance.id)
+                task = process_import_hr.delay(instance.id)
             elif instance.upload_type == 5:
-                process_import_timekeeping.delay(instance.id)
+                task = process_import_timekeeping.delay(instance.id)
             elif instance.upload_type == 7:
-                process_import_contact.delay(instance.id)
+                task = process_import_contact.delay(instance.id)
             elif instance.upload_type == 8:
-                process_import_customer.delay(instance.id)
+                task = process_import_customer.delay(instance.id)
             elif instance.upload_type == 9:
-                process_import_work.delay(instance.id)
+                task = process_import_work.delay(instance.id)
+            
+            if task:
+                Upload.objects.filter(id=instance.id).update(task_id=task.id)
         except Exception as e:
             print('Upload Exception', e)
             instance.status = 1

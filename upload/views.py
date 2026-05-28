@@ -1,8 +1,11 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from django_filters.rest_framework import FilterSet
 import django_filters
 from django.db.models import Q
+from celery import current_app
 
 from upload.serializers import UploadSerializer
 from rest_framework.permissions import IsAuthenticated
@@ -48,4 +51,14 @@ class UploadViewSet(viewsets.ModelViewSet):
         # override created_by        
         request.data['created_by'] = request.user.id
         return super().create(request, *args, **kwargs)
-    
+
+    @action(detail=True, methods=['post'])
+    def revoke_import_in_progress(self, request, *args, **kwargs):
+        obj = self.get_object()
+        if obj.status == 3:
+            task_id = obj.task_id
+            if task_id:
+                current_app.control.revoke(task_id, terminate=True)
+            obj.status = 9
+            obj.save()
+        return Response({'success': 'Import revoked'}, status=status.HTTP_200_OK)
