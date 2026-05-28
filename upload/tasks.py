@@ -161,8 +161,8 @@ def process_import_contact(import_id):
                     import_obj['curators'] = curator_objs
                 else:
                     import_obj['curators'] = []
-                import_obj['type_of_customer'] = mapping_type.get(import_obj['type_of_customer'].strip().lower(), None)
-                import_obj['customer_source'] = mapping_source.get(import_obj['customer_source'].strip().lower(),None)
+                import_obj['type_of_customer'] = mapping_type.get(import_obj['type_of_customer'].strip().lower(), None) if import_obj.get('type_of_customer') else None
+                import_obj['customer_source'] = mapping_source.get(import_obj['customer_source'].strip().lower(), None) if import_obj.get('customer_source') else None
                 import_obj['stage'] = 1
                 try:
                     customer = Customer.objects.get(customer_code=import_obj['customer_code'],stage=1)
@@ -273,9 +273,9 @@ def process_import_customer(import_id):
                     import_obj['curators'] = curator_objs
                 else:
                     import_obj['curators'] = []
-                import_obj['type_of_customer'] = mapping_type.get(import_obj['type_of_customer'].strip().lower(), None)
-                import_obj['customer_source'] = mapping_source.get(import_obj['customer_source'].strip().lower(),None)
-                import_obj['customer_group'] = mapping_group.get(import_obj['customer_group'].strip().lower(),None)
+                import_obj['type_of_customer'] = mapping_type.get(import_obj['type_of_customer'].strip().lower(), None) if import_obj.get('type_of_customer') else None
+                import_obj['customer_source'] = mapping_source.get(import_obj['customer_source'].strip().lower(), None) if import_obj.get('customer_source') else None
+                import_obj['customer_group'] = mapping_group.get(import_obj['customer_group'].strip().lower(), None) if import_obj.get('customer_group') else None
                 import_obj['stage'] = 2
                 try:
                     print('import_obj', import_obj)
@@ -400,8 +400,8 @@ def process_import_work(import_id):
                     import_obj['managers'] = _objs
                 else:
                     import_obj['managers'] = []
-                import_obj['priority'] = mapping_priority.get(import_obj['priority'].strip().lower(),None)
-                import_obj['status'] = mapping_status.get(import_obj['status'].strip().lower(),None)
+                import_obj['priority'] = mapping_priority.get(import_obj['priority'].strip().lower(), None) if import_obj.get('priority') else None
+                import_obj['status'] = mapping_status.get(import_obj['status'].strip().lower(), None) if import_obj.get('status') else None
 
                 try:
                     print('import_obj', import_obj)
