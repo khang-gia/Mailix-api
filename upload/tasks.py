@@ -207,10 +207,8 @@ def process_import_contact(import_id):
                 try:
                     customer = Customer._base_manager.get(customer_code=import_obj['customer_code'],stage=1)
                     if getattr(customer, 'is_deleted', False):
-                        customer.is_deleted = False
-                        if hasattr(customer, 'deleted_at'):
-                            customer.deleted_at = None
-                        customer.save(update_fields=['is_deleted', 'deleted_at'])
+                        customer.deleted_at = None
+                        customer.save(update_fields=['deleted_at'])
                     serializer = CustomerImportSerializer(customer, data=import_obj)
                 except Customer.DoesNotExist:
                     serializer = CustomerImportSerializer(data=import_obj)
@@ -360,10 +358,8 @@ def process_import_customer(import_id):
                     print('import_obj', import_obj)
                     customer = Customer._base_manager.get(customer_code=import_obj['customer_code'], stage=2)
                     if getattr(customer, 'is_deleted', False):
-                        customer.is_deleted = False
-                        if hasattr(customer, 'deleted_at'):
-                            customer.deleted_at = None
-                        customer.save(update_fields=['is_deleted', 'deleted_at'])
+                        customer.deleted_at = None
+                        customer.save(update_fields=['deleted_at'])
                     serializer = CustomerImportSerializer(customer, data=import_obj)
                 except Customer.DoesNotExist:
                     serializer = CustomerImportSerializer(data=import_obj)
@@ -508,10 +504,8 @@ def process_import_work(import_id):
                     print('import_obj', import_obj)
                     work = Works._base_manager.get(code=import_obj['code'])
                     if getattr(work, 'is_deleted', False):
-                        work.is_deleted = False
-                        if hasattr(work, 'deleted_at'):
-                            work.deleted_at = None
-                        work.save(update_fields=['is_deleted', 'deleted_at'])
+                        work.deleted_at = None
+                        work.save(update_fields=['deleted_at'])
                     serializer = WorkImportSerializer(work, data=import_obj)
                 except Works.DoesNotExist:
                     serializer = WorkImportSerializer(data=import_obj)
