@@ -2,6 +2,7 @@ from datetime import datetime, date, timedelta
 from django.utils import timezone
 import openpyxl
 import os.path
+import json
 import logging
 from celery import shared_task
 from django.db.models import Sum
@@ -9,6 +10,12 @@ from django.conf import settings
 from upload.models import Upload
 from core.serializers import ProfileHRSerializer, CustomerImportSerializer,WorkImportSerializer
 from django.db import transaction, DatabaseError
+
+mapping_gender = {
+    'nam': 'Nam', 'male': 'Nam', 'm': 'Nam',
+    'nữ': 'Nữ', 'nu': 'Nữ', 'female': 'Nữ', 'f': 'Nữ',
+    'khác': 'Khác', 'other': 'Khác', 'o': 'Khác'
+}
 
 @shared_task
 def process_import_hr(import_id):
@@ -52,6 +59,14 @@ def process_import_hr(import_id):
                 import_obj[COLS[j]] = value.date()
         total += 1    
         serializer = None
+
+        if import_obj.get('gender'):
+            val_lower = import_obj['gender'].strip().lower()
+            if val_lower not in mapping_gender:
+                errors.append({'row': total, 'type': 'invalid_choice', 'field': 'gender', 'value': import_obj['gender'], 'allowed': ['Nam', 'Nữ', 'Khác']})
+                failure += 1
+                continue
+            import_obj['gender'] = mapping_gender[val_lower]
         if import_obj['direct_manager']:
             _direct_manager = User.objects.filter(username=import_obj['direct_manager']).first()
             if _direct_manager:
@@ -65,21 +80,21 @@ def process_import_hr(import_id):
             serializer = ProfileHRSerializer(data=import_obj)
         except Exception as e:
             print(e)
-            errors.append('Row {}: Exception - {}'.format(total, str(e)))
+            errors.append({'row': total, 'type': 'exception', 'message': str(e)})
         if serializer and serializer.is_valid():
             profileHr = serializer.save()
             success += 1
         else:
             if serializer:
                 print(serializer.errors)
-                errors.append('Row {}: {}'.format(total, str(serializer.errors)))
+                errors.append({'row': total, 'type': 'validation', 'details': serializer.errors})
             failure += 1
 
     obj.success = success
     obj.failure = failure
     obj.total = total
     obj.status = 1
-    obj.errors_log = '\n'.join(errors) if errors else None
+    obj.errors_log = json.dumps(errors, ensure_ascii=False) if errors else None
     obj.save()
     # logger.info('Import {} has total {} update'.format(import_id, total_updated))
     wb.close()
@@ -154,6 +169,14 @@ def process_import_contact(import_id):
         serializer = None
         try: 
             with transaction.atomic():
+
+                if import_obj.get('gender'):
+                    val_lower = import_obj['gender'].strip().lower()
+                    if val_lower not in mapping_gender:
+                                errors.append({'row': total, 'type': 'invalid_choice', 'field': 'gender', 'value': import_obj['gender'], 'allowed': ['Nam', 'Nữ', 'Khác']})
+                                failure += 1
+                                continue
+                    import_obj['gender'] = mapping_gender[val_lower]
                 if import_obj['curators']:
                     curator_names = [n.strip() for n in import_obj['curators'].split(",") if n.strip()]
                     curator_objs = []
@@ -161,18 +184,40 @@ def process_import_contact(import_id):
                     import_obj['curators'] = curator_objs
                 else:
                     import_obj['curators'] = []
-                import_obj['type_of_customer'] = mapping_type.get(import_obj['type_of_customer'].strip().lower(), None) if import_obj.get('type_of_customer') else None
-                import_obj['customer_source'] = mapping_source.get(import_obj['customer_source'].strip().lower(), None) if import_obj.get('customer_source') else None
+                if import_obj.get('type_of_customer'):
+                    val_lower = import_obj['type_of_customer'].strip().lower()
+                    if val_lower not in mapping_type:
+                        errors.append({'row': total, 'type': 'invalid_choice', 'field': 'type_of_customer', 'value': import_obj['type_of_customer'], 'allowed': list(mapping_type.keys())})
+                        failure += 1
+                        continue
+                    import_obj['type_of_customer'] = mapping_type[val_lower]
+                else:
+                    import_obj['type_of_customer'] = 1
+
+                if import_obj.get('customer_source'):
+                    val_lower = import_obj['customer_source'].strip().lower()
+                    if val_lower not in mapping_source:
+                        errors.append({'row': total, 'type': 'invalid_choice', 'field': 'customer_source', 'value': import_obj['customer_source'], 'allowed': list(mapping_source.keys())})
+                        failure += 1
+                        continue
+                    import_obj['customer_source'] = mapping_source[val_lower]
+                else:
+                    import_obj['customer_source'] = 1
                 import_obj['stage'] = 1
                 try:
-                    customer = Customer.objects.get(customer_code=import_obj['customer_code'],stage=1)
+                    customer = Customer._base_manager.get(customer_code=import_obj['customer_code'],stage=1)
+                    if getattr(customer, 'is_deleted', False):
+                        customer.is_deleted = False
+                        if hasattr(customer, 'deleted_at'):
+                            customer.deleted_at = None
+                        customer.save(update_fields=['is_deleted', 'deleted_at'])
                     serializer = CustomerImportSerializer(customer, data=import_obj)
                 except Customer.DoesNotExist:
                     serializer = CustomerImportSerializer(data=import_obj)
                 except Exception as e:
                     print(e)
                     failure += 1
-                    errors.append('Row {}: Exception - {}'.format(total, str(e)))
+                    errors.append({'row': total, 'type': 'exception', 'message': str(e)})
                 if serializer and serializer.is_valid():
                     print('serializer valid')
                     customer = serializer.save()
@@ -180,18 +225,18 @@ def process_import_contact(import_id):
                 else:
                     if serializer:
                         print(serializer.errors)
-                        errors.append('Row {}: {}'.format(total, str(serializer.errors)))
+                        errors.append({'row': total, 'type': 'validation', 'details': serializer.errors})
                     failure += 1
         except Exception as e:
             failure += 1
             logger.error('Upload contact has exception error: %s', e)
-            errors.append('Row {}: Exception - {}'.format(total, str(e)))
+            errors.append({'row': total, 'type': 'exception', 'message': str(e)})
 
     obj.success = success
     obj.failure = failure
     obj.total = total
     obj.status = 1
-    obj.errors_log = '\n'.join(errors) if errors else None
+    obj.errors_log = json.dumps(errors, ensure_ascii=False) if errors else None
     obj.save()
     # logger.info('Import {} has total {} update'.format(import_id, total_updated))
     wb.close()
@@ -266,6 +311,14 @@ def process_import_customer(import_id):
         serializer = None
         try: 
             with transaction.atomic():
+
+                if import_obj.get('gender'):
+                    val_lower = import_obj['gender'].strip().lower()
+                    if val_lower not in mapping_gender:
+                                errors.append({'row': total, 'type': 'invalid_choice', 'field': 'gender', 'value': import_obj['gender'], 'allowed': ['Nam', 'Nữ', 'Khác']})
+                                failure += 1
+                                continue
+                    import_obj['gender'] = mapping_gender[val_lower]
                 if import_obj['curators']:
                     curator_names = [n.strip() for n in import_obj['curators'].split(",") if n.strip()]
                     curator_objs = []
@@ -273,38 +326,69 @@ def process_import_customer(import_id):
                     import_obj['curators'] = curator_objs
                 else:
                     import_obj['curators'] = []
-                import_obj['type_of_customer'] = mapping_type.get(import_obj['type_of_customer'].strip().lower(), None) if import_obj.get('type_of_customer') else None
-                import_obj['customer_source'] = mapping_source.get(import_obj['customer_source'].strip().lower(), None) if import_obj.get('customer_source') else None
-                import_obj['customer_group'] = mapping_group.get(import_obj['customer_group'].strip().lower(), None) if import_obj.get('customer_group') else None
+                if import_obj.get('type_of_customer'):
+                    val_lower = import_obj['type_of_customer'].strip().lower()
+                    if val_lower not in mapping_type:
+                        errors.append({'row': total, 'type': 'invalid_choice', 'field': 'type_of_customer', 'value': import_obj['type_of_customer'], 'allowed': list(mapping_type.keys())})
+                        failure += 1
+                        continue
+                    import_obj['type_of_customer'] = mapping_type[val_lower]
+                else:
+                    import_obj['type_of_customer'] = 1
+
+                if import_obj.get('customer_source'):
+                    val_lower = import_obj['customer_source'].strip().lower()
+                    if val_lower not in mapping_source:
+                        errors.append({'row': total, 'type': 'invalid_choice', 'field': 'customer_source', 'value': import_obj['customer_source'], 'allowed': list(mapping_source.keys())})
+                        failure += 1
+                        continue
+                    import_obj['customer_source'] = mapping_source[val_lower]
+                else:
+                    import_obj['customer_source'] = 1
+
+                if import_obj.get('customer_group'):
+                    val_lower = import_obj['customer_group'].strip().lower()
+                    if val_lower not in mapping_group:
+                        errors.append({'row': total, 'type': 'invalid_choice', 'field': 'customer_group', 'value': import_obj['customer_group'], 'allowed': list(mapping_group.keys())})
+                        failure += 1
+                        continue
+                    import_obj['customer_group'] = mapping_group[val_lower]
+                else:
+                    import_obj['customer_group'] = 1
                 import_obj['stage'] = 2
                 try:
                     print('import_obj', import_obj)
-                    customer = Customer.objects.get(customer_code=import_obj['customer_code'], stage=2)
+                    customer = Customer._base_manager.get(customer_code=import_obj['customer_code'], stage=2)
+                    if getattr(customer, 'is_deleted', False):
+                        customer.is_deleted = False
+                        if hasattr(customer, 'deleted_at'):
+                            customer.deleted_at = None
+                        customer.save(update_fields=['is_deleted', 'deleted_at'])
                     serializer = CustomerImportSerializer(customer, data=import_obj)
                 except Customer.DoesNotExist:
                     serializer = CustomerImportSerializer(data=import_obj)
                 except Exception as e:
                     print(e)
                     failure += 1
-                    errors.append('Row {}: Exception - {}'.format(total, str(e)))
+                    errors.append({'row': total, 'type': 'exception', 'message': str(e)})
                 if serializer and serializer.is_valid():
                     customer = serializer.save()
                     success += 1
                 else:
                     if serializer:
                         print(serializer.errors)
-                        errors.append('Row {}: {}'.format(total, str(serializer.errors)))
+                        errors.append({'row': total, 'type': 'validation', 'details': serializer.errors})
                     failure += 1
         except Exception as e:
             failure += 1
             logger.error('Upload customer has exception error: %s', e)
-            errors.append('Row {}: Exception - {}'.format(total, str(e)))
+            errors.append({'row': total, 'type': 'exception', 'message': str(e)})
 
     obj.success = success
     obj.failure = failure
     obj.total = total
     obj.status = 1
-    obj.errors_log = '\n'.join(errors) if errors else None
+    obj.errors_log = json.dumps(errors, ensure_ascii=False) if errors else None
     obj.save()
     # logger.info('Import {} has total {} update'.format(import_id, total_updated))
     wb.close()
@@ -400,37 +484,59 @@ def process_import_work(import_id):
                     import_obj['managers'] = _objs
                 else:
                     import_obj['managers'] = []
-                import_obj['priority'] = mapping_priority.get(import_obj['priority'].strip().lower(), None) if import_obj.get('priority') else None
-                import_obj['status'] = mapping_status.get(import_obj['status'].strip().lower(), None) if import_obj.get('status') else None
+                if import_obj.get('priority'):
+                    val_lower = import_obj['priority'].strip().lower()
+                    if val_lower not in mapping_priority:
+                        errors.append({'row': total, 'type': 'invalid_choice', 'field': 'priority', 'value': import_obj['priority'], 'allowed': list(mapping_priority.keys())})
+                        failure += 1
+                        continue
+                    import_obj['priority'] = mapping_priority[val_lower]
+                else:
+                    import_obj['priority'] = 2
+
+                if import_obj.get('status'):
+                    val_lower = import_obj['status'].strip().lower()
+                    if val_lower not in mapping_status:
+                        errors.append({'row': total, 'type': 'invalid_choice', 'field': 'status', 'value': import_obj['status'], 'allowed': list(mapping_status.keys())})
+                        failure += 1
+                        continue
+                    import_obj['status'] = mapping_status[val_lower]
+                else:
+                    import_obj['status'] = 1
 
                 try:
                     print('import_obj', import_obj)
-                    work = Works.objects.get(code=import_obj['code'])
+                    work = Works._base_manager.get(code=import_obj['code'])
+                    if getattr(work, 'is_deleted', False):
+                        work.is_deleted = False
+                        if hasattr(work, 'deleted_at'):
+                            work.deleted_at = None
+                        work.save(update_fields=['is_deleted', 'deleted_at'])
                     serializer = WorkImportSerializer(work, data=import_obj)
                 except Works.DoesNotExist:
                     serializer = WorkImportSerializer(data=import_obj)
                 except Exception as e:
                     print(e)
                     failure += 1
-                    errors.append('Row {}: Exception - {}'.format(total, str(e)))
+                    errors.append({'row': total, 'type': 'exception', 'message': str(e)})
                 if serializer and serializer.is_valid():
                     work = serializer.save()
                     success += 1
                 else:
                     if serializer:
                         print(serializer.errors)
-                        errors.append('Row {}: {}'.format(total, str(serializer.errors)))
+                        errors.append({'row': total, 'type': 'validation', 'details': serializer.errors})
                     failure += 1
         except Exception as e:
             failure += 1
             logger.error('Upload work has exception error: %s', e)
-            errors.append('Row {}: Exception - {}'.format(total, str(e)))
+            errors.append({'row': total, 'type': 'exception', 'message': str(e)})
 
     obj.success = success
     obj.failure = failure
     obj.total = total
     obj.status = 1
-    obj.errors_log = '\n'.join(errors) if errors else None
+    obj.errors_log = json.dumps(errors, ensure_ascii=False) if errors else None
     obj.save()
     # logger.info('Import {} has total {} update'.format(import_id, total_updated))
     wb.close()
