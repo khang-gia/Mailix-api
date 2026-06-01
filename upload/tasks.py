@@ -611,3 +611,105 @@ def process_import_timekeeping(import_id):
     obj.save()
     # logger.info('Import {} has total {} update'.format(import_id, total_updated))
     wb.close()
+
+
+@shared_task
+def process_remove_hr(import_id):
+    from core.models import ProfileHR
+    obj = Upload.objects.filter(id=import_id).first()
+    if not obj: return
+    try:
+        wb = openpyxl.load_workbook(obj.file.file, data_only=True)
+        sheet = wb.active
+        errors, success, failure, total = [], 0, 0, 0
+        # HR template: min_col=2, COLS index 3 = employee_code
+        HR_CODE_IDX = 3
+        for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row, min_col=2, values_only=True):
+            if not any(row):
+                break
+            code = row[HR_CODE_IDX]
+            if not code: continue
+            total += 1
+            code = str(code).strip()
+            profile = ProfileHR.objects.filter(employee_code=code).first()
+            if profile:
+                profile.delete()
+                success += 1
+            else:
+                errors.append({'row': total, 'type': 'not_found', 'code': code})
+                failure += 1
+
+        obj.success, obj.failure, obj.total, obj.status = success, failure, total, 1
+        obj.errors_log = json.dumps(errors, ensure_ascii=False) if errors else None
+        obj.save()
+    except Exception as e:
+        obj.status, obj.errors_log = 1, json.dumps([{'row': 0, 'type': 'exception', 'message': str(e)}], ensure_ascii=False)
+        obj.save()
+
+
+@shared_task
+def process_remove_contact(import_id):
+    from core.models import Customer
+    obj = Upload.objects.filter(id=import_id).first()
+    if not obj: return
+    try:
+        wb = openpyxl.load_workbook(obj.file.file, data_only=True)
+        sheet = wb.active
+        errors, success, failure, total = [], 0, 0, 0
+        # Contact template: row[1:], COLS index 1 = customer_code (col C)
+        CONTACT_CODE_IDX = 1
+        for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row, values_only=True):
+            if not any(row):
+                break
+            code = row[CONTACT_CODE_IDX + 1]  # +1 to skip the No. column (col A)
+            if not code: continue
+            total += 1
+            code = str(code).strip()
+            customer = Customer.objects.filter(customer_code=code, stage=1).first()
+            if customer:
+                customer.delete()
+                success += 1
+            else:
+                errors.append({'row': total, 'type': 'not_found', 'code': code})
+                failure += 1
+
+        obj.success, obj.failure, obj.total, obj.status = success, failure, total, 1
+        obj.errors_log = json.dumps(errors, ensure_ascii=False) if errors else None
+        obj.save()
+    except Exception as e:
+        obj.status, obj.errors_log = 1, json.dumps([{'row': 0, 'type': 'exception', 'message': str(e)}], ensure_ascii=False)
+        obj.save()
+
+@shared_task
+def process_remove_customer(import_id):
+    from core.models import Customer
+    obj = Upload.objects.filter(id=import_id).first()
+    if not obj: return
+    try:
+        wb = openpyxl.load_workbook(obj.file.file, data_only=True)
+        sheet = wb.active
+        errors, success, failure, total = [], 0, 0, 0
+        # Customer template: row[1:], COLS index 1 = customer_code (col C)
+        CUSTOMER_CODE_IDX = 1
+        for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row, values_only=True):
+            if not any(row):
+                break
+            code = row[CUSTOMER_CODE_IDX + 1]  # +1 to skip the No. column (col A)
+            if not code: continue
+            total += 1
+            code = str(code).strip()
+            customer = Customer.objects.filter(customer_code=code, stage=2).first()
+            if customer:
+                customer.delete()
+                success += 1
+            else:
+                errors.append({'row': total, 'type': 'not_found', 'code': code})
+                failure += 1
+
+        obj.success, obj.failure, obj.total, obj.status = success, failure, total, 1
+        obj.errors_log = json.dumps(errors, ensure_ascii=False) if errors else None
+        obj.save()
+    except Exception as e:
+        obj.status, obj.errors_log = 1, json.dumps([{'row': 0, 'type': 'exception', 'message': str(e)}], ensure_ascii=False)
+        obj.save()
+

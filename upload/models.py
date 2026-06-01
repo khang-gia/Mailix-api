@@ -14,7 +14,10 @@ UPLOAD_TYPES = (
     (6, 'Salary'),
     (7 , 'Contacts'),
     (8 , 'Customers'),
-    (9 , 'Works')
+    (9 , 'Works'),
+    (101, 'Remove Profile HR'),
+    (107, 'Remove Contacts'),
+    (108, 'Remove Customers')
 )
 UPLOAD_FODLERS = {
    0: 'unknowns',
@@ -73,7 +76,7 @@ class Upload(models.Model):
 
 @receiver(signal=post_save, sender=Upload)
 def upload_save_signal(sender, instance, created, *kargs, **kwargs):
-    from upload.tasks import process_import_hr, process_import_timekeeping, process_import_contact, process_import_customer, process_import_work
+    from upload.tasks import process_import_hr, process_import_timekeeping, process_import_contact, process_import_customer, process_import_work, process_remove_hr, process_remove_contact, process_remove_customer
     if created: # new
         instance.status = 3
         instance.save()
@@ -89,6 +92,12 @@ def upload_save_signal(sender, instance, created, *kargs, **kwargs):
                 task = process_import_customer.delay(instance.id)
             elif instance.upload_type == 9:
                 task = process_import_work.delay(instance.id)
+            elif instance.upload_type == 101:
+                task = process_remove_hr.delay(instance.id)
+            elif instance.upload_type == 107:
+                task = process_remove_contact.delay(instance.id)
+            elif instance.upload_type == 108:
+                task = process_remove_customer.delay(instance.id)
             
             if task:
                 Upload.objects.filter(id=instance.id).update(task_id=task.id)
