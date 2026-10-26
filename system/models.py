@@ -68,11 +68,24 @@ class Company(BaseCreateUpdateDeleteModel):
     email = models.EmailField("Email", null=True, blank=True, db_index=True)
     industry = models.IntegerField("Industry", choices=INDUSTRY_CHOICES, null=True, blank=True, db_index=True)
     # config_volume = models.ForeignKey('ConfigVolume', on_delete=models.SET_NULL, null=True, blank=True, related_name='companies', db_index=True)
+    
+    # Module-based access control
+    enabled_modules = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of enabled module codes, e.g., ['crm', 'hrm', 'inventory']. Controls which features the company can access."
+    )
 
     history = HistoricalRecords()
 
     def __str__(self) -> str:
         return "Company {}".format(self.name)
+    
+    def has_module(self, module_code):
+        """Check if company has access to a specific module"""
+        if not self.enabled_modules:
+            return False
+        return module_code in self.enabled_modules
 
 class BusinessUnit(BaseCreateUpdateDeleteModel):
     name = models.CharField('Name',max_length=100)
@@ -94,7 +107,7 @@ class Department(BaseCreateUpdateDeleteModel):
     parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="childen", db_index=True)
     business_unit = models.ForeignKey("BusinessUnit", on_delete=models.SET_NULL, null=True, blank=True, related_name="departments", db_index=True)
     department_type = models.IntegerField("Department Type", choices=DEPARTMENT_TYPES, default=1)
-    # company = models.ForeignKey('Company', on_delete=models.CASCADE, related_name="departments",db_index=True)
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True, blank=True, related_name="departments", db_index=True)
     group = models.ForeignKey('SystemGroup', on_delete=models.SET_NULL, null=True, blank=True, related_name='departments', db_index=True)
     resources = models.ManyToManyField('SystemResource', related_name='departments_assigned', db_index=True, blank=True)
     config_volume = models.ForeignKey('ConfigVolume', on_delete=models.SET_NULL, null=True, blank=True, related_name='departments', db_index=True)
@@ -141,7 +154,7 @@ class SystemGroup(BaseCreateUpdateDeleteModel):
     resources = models.ManyToManyField(SystemResource, related_name='groups', db_index=True, blank=True)
     users = models.ManyToManyField(User, related_name='member_groups', blank=True)
     # account_type = models.ForeignKey("AccountType", on_delete=models.SET_NULL, null=True, blank=True, related_name="system_groups", db_index=True)
-
+    fixed_group = models.BooleanField("Fixed Group", default=False)
     history = HistoricalRecords()
     def __str__(self) -> str:
         return "SystemGroup <{}>".format(self.name)
@@ -288,36 +301,78 @@ class ScheduleEvent(BaseCreateUpdateDeleteModel):
 
 #     def __str__(self):
 #         return f"Notification for {self.schedule_event} to {self.recipient_email}"    
-# Decentralization
-# class GroupResource(models.Model):
-# 	group = models.CharField(max_length=255, null=True, blank=True, verbose_name='group')
-# 	name = models.CharField(max_length=255, null=True, blank=True, verbose_name='name')
+# Decentralization Models
+class GroupResource(models.Model):
+    """Resource categories for organizing API endpoints"""
+    group = models.CharField(max_length=255, null=True, blank=True, verbose_name='group', db_index=True)
+    name = models.CharField(max_length=255, null=True, blank=True, verbose_name='name')
+    description = models.TextField('Description', null=True, blank=True)
 
-# 	def __str__(self):
-# 		return '{}'.format(self.name)
+    def __str__(self):
+        return '{}'.format(self.name)
 
-# 	class Meta:
-# 		ordering = ['id']
+    class Meta:
+        ordering = ['id']
+        verbose_name = 'Group Resource'
+        verbose_name_plural = 'Group Resources'
 
-# class Resource(models.Model):
-# 	apps = models.CharField(max_length=255, null=True, blank=True, verbose_name='api_name')
-# 	name = models.CharField(max_length=255, null=True, blank=True, verbose_name='name')
-# 	name_view = models.CharField(max_length=255, null=True, blank=True, verbose_name='name_view')
-# 	url = models.CharField(max_length=255, null=True, blank=True, verbose_name='url')
-# 	action = models.CharField(max_length=255, null=True, blank=True, verbose_name='action')
-# 	sort_number = models.IntegerField(default=0)
-# 	group_resource =  models.ForeignKey(GroupResource, null=True, blank=True, related_name='group_resource', on_delete=models.CASCADE)
+class Resource(models.Model):
+    """API endpoint resources with actions for permission control"""
+    apps = models.CharField(max_length=255, null=True, blank=True, verbose_name='api_name', db_index=True)
+    name = models.CharField(max_length=255, null=True, blank=True, verbose_name='name')
+    name_view = models.CharField(max_length=255, null=True, blank=True, verbose_name='name_view')
+    url = models.CharField(max_length=255, null=True, blank=True, verbose_name='url', db_index=True)
+    action = models.CharField(max_length=255, null=True, blank=True, verbose_name='action', db_index=True)
+    sort_number = models.IntegerField(default=0)
+    group_resource = models.ForeignKey(
+        GroupResource, 
+        null=True, 
+        blank=True, 
+        related_name='resources', 
+        on_delete=models.CASCADE
+    )
 
-# 	def __str__(self):
-# 		return '{}<{}> - {}'.format(self.name, self.pk, self.name_view)
+    def __str__(self):
+        return '{}<{}> - {}'.format(self.name, self.pk, self.name_view)
 
-# 	class Meta:
-# 		ordering = ['sort_number']
+    class Meta:
+        ordering = ['sort_number']
+        verbose_name = 'Resource'
+        verbose_name_plural = 'Resources'
+        indexes = [
+            models.Index(fields=['url', 'action']),
+            models.Index(fields=['apps', 'action']),
+        ]
 
-# class Permission(models.Model):
-# 	resource = models.ForeignKey(Resource, null=True, blank=True, related_name='permission', on_delete=models.CASCADE)
-# 	group =  models.ForeignKey(SystemGroup, null=True, blank=True, related_name='permission', on_delete=models.CASCADE)
-# 	status = models.BooleanField(default=False, verbose_name="Is Permission?")
+class Permission(models.Model):
+    """Permission mapping between SystemGroup and Resource"""
+    resource = models.ForeignKey(
+        Resource, 
+        null=True, 
+        blank=True, 
+        related_name='permissions', 
+        on_delete=models.CASCADE
+    )
+    group = models.ForeignKey(
+        SystemGroup, 
+        null=True, 
+        blank=True, 
+        related_name='permissions', 
+        on_delete=models.CASCADE
+    )
+    status = models.BooleanField(default=False, verbose_name="Is Permission?", db_index=True)
 
-# 	class Meta:
-# 		unique_together = ('resource', 'group')
+    def __str__(self):
+        group_name = self.group.name if self.group else 'No Group'
+        resource_name = self.resource.name if self.resource else 'No Resource'
+        status_text = 'Granted' if self.status else 'Denied'
+        return '{} - {} - {}'.format(group_name, resource_name, status_text)
+
+    class Meta:
+        unique_together = ('resource', 'group')
+        verbose_name = 'Permission'
+        verbose_name_plural = 'Permissions'
+        indexes = [
+            models.Index(fields=['group', 'status']),
+            models.Index(fields=['status']),
+        ]

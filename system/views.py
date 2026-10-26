@@ -173,7 +173,7 @@ class SystemGroupFilter(FilterSet):
     search = django_filters.CharFilter(method='elastic_search')
     class Meta:
         model = SystemGroup
-        fields = ['name', 'code']
+        fields = ['name', 'code', 'fixed_group']
 
     def elastic_search(self, queryset, name, value):
         if not value:
@@ -243,6 +243,161 @@ class CompanyViewSet(viewsets.ModelViewSet):
   ordering_fields = ['id']
   ordering = ('-id',)
 
+  @action(detail=True, methods=['patch'], url_path='update-modules')
+  def update_modules(self, request, pk=None):
+      """
+      Update enabled modules for a company.
+      This endpoint is designed for external pricing/subscription systems.
+      
+      Body: {
+        "enabled_modules": ["crm", "hrm", "inventory"]
+      }
+      """
+      company = self.get_object()
+      
+      # Only superusers or system admins can update modules
+      if not (request.user.is_superuser or 
+              (hasattr(request.user, 'profile') and request.user.profile.is_system_admin)):
+          return Response(
+              {'detail': 'Only administrators can update company modules'},
+              status=status.HTTP_403_FORBIDDEN
+          )
+      
+      modules = request.data.get('enabled_modules', [])
+      
+      # Validate modules is a list
+      if not isinstance(modules, list):
+          return Response(
+              {'detail': 'enabled_modules must be a list'},
+              status=status.HTTP_400_BAD_REQUEST
+          )
+      
+      # Update company modules
+      company.enabled_modules = modules
+      company.save()
+      
+      serializer = self.get_serializer(company)
+      return Response({
+          'detail': 'Modules updated successfully',
+          'company': serializer.data
+      })
+
+
+# RBAC Permission ViewSets
+class GroupResourceFilter(FilterSet):
+    search = django_filters.CharFilter (method='elastic_search')
+    
+    class Meta:
+        model = GroupResource
+        fields = ['group', 'name']
+    
+    def elastic_search(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value) | Q(group__icontains=value)
+        )
+
+class GroupResourceViewSet(viewsets.ModelViewSet):
+    queryset = GroupResource.objects.all()
+    serializer_class = GroupResourceSerializer
+    filterset_class = GroupResourceFilter
+    ordering = ['id']
+
+class ResourceFilter(FilterSet):
+    apps = django_filters.CharFilter(field_name="apps")
+    group_resource = django_filters.CharFilter(field_name="group_resource__group")
+    search = django_filters.CharFilter(method='elastic_search')
+    
+    class Meta:
+        model = Resource
+        fields = ['apps', 'group_resource']
+    
+    def elastic_search(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value) | 
+            Q(apps__icontains=value) |
+            Q(url__icontains=value)
+        )
+
+class ResourceViewSet(viewsets.ModelViewSet):
+    queryset = Resource.objects.all()
+    serializer_class = ResourceSerializer
+    filterset_class = ResourceFilter
+    ordering = ['sort_number']
+
+class PermissionFilter(FilterSet):
+    class Meta:
+        model = Permission
+        fields = ['group', 'status', 'resource']
+
+class PermissionViewSet(viewsets.ModelViewSet):
+    queryset = Permission.objects.all()
+    serializer_class = PermissionSerializer
+    filterset_class = PermissionFilter
+    ordering = ['id']
+    
+    @action(detail=False, methods=['POST'])
+    def update_multiple(self, request):
+        """Bulk update permissions for multiple groups"""
+        try:
+            for group_data in request.data:
+                for resource_perm in group_data.get('resource_list', []):
+                    Permission.objects.update_or_create(
+                        group_id=resource_perm['group'],
+                        resource_id=resource_perm['resource'],
+                        defaults={'status': resource_perm.get('status', False)}
+                    )
+            
+            return Response({"detail": "Permissions updated successfully."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['GET'], url_path='my-permissions')
+    def my_permissions(self, request):
+        """
+        Returns all granted permissions for the current user's groups.
+        Used by the frontend to build the RBAC permissions store on login.
+
+        Response format (minimal, optimised for frontend):
+        [
+          { "url": "/api/v1/core/employees/", "action": "list", "category": "hrm" },
+          ...
+        ]
+        """
+        from system.permissions import AclPermission
+        acl = AclPermission()
+        group_ids = acl._get_user_groups(request.user)
+
+        if not group_ids:
+            return Response([])
+
+        permissions = (
+            Permission.objects
+            .filter(status=True, group_id__in=group_ids)
+            .select_related('resource', 'resource__group_resource')
+            .distinct()
+        )
+
+        data = []
+        for p in permissions:
+            if not p.resource:
+                continue
+            data.append({
+                'url':      p.resource.url,
+                'action':   p.resource.action,
+                'category': (
+                    p.resource.group_resource.group
+                    if p.resource.group_resource else None
+                ),
+            })
+
+        return Response(data)
+
+
+  
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def system_config(request):

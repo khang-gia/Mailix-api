@@ -129,3 +129,40 @@ class CompanySerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
         fields = '__all__'
+
+# RBAC Permission Serializers
+class GroupResourceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GroupResource
+        fields = '__all__'
+
+class ResourceSerializer(serializers.ModelSerializer):
+    group_resource_detail = GroupResourceSerializer(source='group_resource', read_only=True)
+    
+    class Meta:
+        model = Resource
+        fields = '__all__'
+
+class PermissionSerializer(serializers.ModelSerializer):
+    group_detail = SystemGroupDetailSerializer(source='group', read_only=True)
+    resource_detail = ResourceSerializer(source='resource', read_only=True)
+    
+    class Meta:
+        model = Permission
+        fields = '__all__'
+
+class SystemGroupWithResourcesSerializer(serializers.ModelSerializer):
+    """SystemGroup serializer with filtered resources based on permissions"""
+    resources = serializers.SerializerMethodField()
+    
+    def get_resources(self, obj):
+        # Return all resources this group has permission for
+        resources = Resource.objects.filter(
+            permissions__group=obj,
+            permissions__status=True
+        ).distinct()
+        return ResourceSerializer(resources, many=True).data
+    
+    class Meta:
+        model = SystemGroup
+        fields = '__all__'

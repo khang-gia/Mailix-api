@@ -33,12 +33,36 @@ class ScheduleEventAdmin(admin.ModelAdmin):
   list_display = ('title', 'user', 'start_datetime', 'end_datetime', 'is_all_day')
   raw_id_fields = ('user',)
 
-@admin.register(SystemGroup)
-class SystemGroupAdmin(admin.ModelAdmin):
-  list_display = ('name','code')
-  raw_id_fields = ('resources',)
-
+# @admin.register(SystemGroup)
+# class SystemGroupAdmin(admin.ModelAdmin):
+#   list_display = ('name','code')
+  # raw_id_fields = ('resources',)
+admin.site.register(SystemGroup)
 @admin.register(SystemResource)
 class SystemResourceAdmin(admin.ModelAdmin):
   list_display = ('name','code','apps')
+
+# RBAC Permission Admin
+@admin.register(GroupResource)
+class GroupResourceAdmin(admin.ModelAdmin):
+    list_display = ['id', 'group', 'name', 'description']
+    search_fields = ['name', 'group']
+    list_filter = ['group']
+
+@admin.register(Resource)
+class ResourceAdmin(admin.ModelAdmin):
+    list_display = ['id', 'apps', 'name', 'name_view', 'url', 'action', 'sort_number']
+    list_filter = ['group_resource', 'apps', 'action']
+    search_fields = ['name', 'apps', 'url']
+    ordering = ['sort_number']
+    raw_id_fields = ['group_resource']
+
+@admin.register(Permission)
+class PermissionAdmin(admin.ModelAdmin):
+    list_display = ['id', 'group', 'resource', 'status']
+    list_filter = ['status', 'group']
+    search_fields = ['group__name', 'resource__name']
+    raw_id_fields = ['resource', 'group']
+    list_editable = ['status']
+
 

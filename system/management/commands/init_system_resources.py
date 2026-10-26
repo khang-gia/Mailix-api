@@ -8,13 +8,19 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS('Starting system resources initialization...'))
         
-        # Define the 6 system resources
+        # Define the system resources (codes align with enabled_modules and MODULE_URL_MAP)
         resources_data = [
             {
-                'name': 'Hướng dẫn',
-                'code': 'guide',
-                'apps': 'mail, app',
-                'description': 'Guide and documentation resources'
+                'name': 'Hướng dẫn Mail',
+                'code': 'guide_mail',
+                'apps': 'mail',
+                'description': 'Mail guide and documentation'
+            },
+            {
+                'name': 'Hướng dẫn App',
+                'code': 'guide_app',
+                'apps': 'app',
+                'description': 'App guide and documentation'
             },
             {
                 'name': 'Tác vụ',
@@ -24,7 +30,7 @@ class Command(BaseCommand):
             },
             {
                 'name': 'Nhân sự',
-                'code': 'customer',
+                'code': 'hrm',        # was 'customer' — renamed to align with enabled_modules
                 'apps': 'me, profile_hr',
                 'description': 'Human resources and profile management'
             },
@@ -51,14 +57,31 @@ class Command(BaseCommand):
         # Create or update the resources
         created_resources = []
         for resource_data in resources_data:
-            resource, created = SystemResource.objects.update_or_create(
-                code=resource_data['code'],
-                defaults={
+            try:
+                resource, created = SystemResource.objects.update_or_create(
+                    code=resource_data['code'],
+                    defaults={
+                        'name': resource_data['name'],
+                        'apps': resource_data['apps'],
+                        'description': resource_data['description']
+                    }
+                )
+            except SystemResource.MultipleObjectsReturned:
+                # Handle duplicates if they exist in the DB
+                duplicates = SystemResource.objects.filter(code=resource_data['code'])
+                resource = duplicates.first()
+                # Update the first one
+                for key, value in {
                     'name': resource_data['name'],
                     'apps': resource_data['apps'],
                     'description': resource_data['description']
-                }
-            )
+                }.items():
+                    setattr(resource, key, value)
+                resource.save()
+                # Delete the rest
+                duplicates.exclude(id=resource.id).delete()
+                created = False
+            
             created_resources.append(resource)
             
             if created:
